@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import urllib.parse
 import urllib.request
 from typing import Optional
 
@@ -35,6 +38,44 @@ class VoiceAssistant:
         except Exception:
             return ""
 
+    def _open_weather_app(self) -> None:
+        try:
+            subprocess.run(["open", "-a", "Weather"], check=False)
+        except Exception:
+            pass
+
+    def _handle_music(self, text: str) -> str:
+        lowered = text.lower().strip()
+        if not any(keyword in lowered for keyword in ["play", "music", "song", "playlist", "spotify"]):
+            return ""
+
+        query = text.strip()
+        lowered_query = query.lower()
+        if lowered_query.startswith("play"):
+            query = query[4:].strip()
+        elif lowered_query.startswith("play the"):
+            query = query[9:].strip()
+        elif lowered_query.startswith("play a"):
+            query = query[6:].strip()
+
+        if not query:
+            query = "music"
+
+        escaped_query = query.replace('\\', '\\\\').replace('"', '\\"')
+        script = f'''
+        tell application "Spotify"
+            activate
+            set q to "{escaped_query}"
+            if q is "" then set q to "music"
+            play track "spotify:search:" & q
+        end tell
+        '''
+        try:
+            subprocess.run(["osascript", "-e", script], check=False)
+            return f"Playing {query} on Spotify."
+        except Exception:
+            return "I couldn't open Spotify from here."
+
     def handle_command(self, command: str) -> str:
         text = command.strip()
         if not text:
@@ -54,12 +95,19 @@ class VoiceAssistant:
             return f"Hello! I'm {self.name}. How can I help you today?"
         if "time" in lowered:
             return f"The current time is {self.system_tools.get_current_time()}."
+        if any(keyword in lowered for keyword in ["play", "music", "song", "playlist", "spotify"]):
+            music_response = self._handle_music(text)
+            if music_response:
+                return music_response
         if "weather" in lowered:
             city = None
             if "in" in lowered:
-                parts = lowered.split("in")
+                parts = lowered.split("in", 1)
                 if len(parts) > 1:
-                    city = parts[-1].strip().split()[0].title()
+                    city_text = parts[1].strip()
+                    if city_text:
+                        city = city_text.split()[0].title()
+            self._open_weather_app()
             return self.network_tools.get_weather(city)
 
         prompt = (
@@ -78,9 +126,9 @@ class VoiceAssistant:
             if wake_word is None:
                 break
             if wake_word:
-                self.tts.speak("I'm listening.")
+                self.tts.speak("Hello master Daniel, how can I help?")
                 print("Please say your command now...")
-                command = self.speech.listen(timeout=8, phrase_time_limit=8)
+                command = self.speech.listen(timeout=12, phrase_time_limit=12)
                 response = self.handle_command(command)
                 self.tts.speak(response)
                 print("Say 'hey Astra' again when you want another command.")

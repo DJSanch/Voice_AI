@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 
@@ -24,3 +25,12 @@ class TextToSpeech:
             self.engine.runAndWait()
             return
         print(f"TTS: {text}")
+
+    def play_audio_file(self, path: str) -> None:
+        if not os.path.exists(path):
+            print(f"Audio file not found: {path}")
+            return
+        if shutil.which("afplay"):
+            subprocess.run(["afplay", path], check=False)
+            return
+        print(f"Audio playback unavailable for: {path}")
