@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+import os
+import wave
+from typing import Optional
+
+try:
+    import speech_recognition as sr
+except ImportError:  # pragma: no cover - optional dependency
+    sr = None
+
+try:
+    import whisper
+except ImportError:  # pragma: no cover - optional dependency
+    whisper = None
+
+
+class SpeechController:
+    def __init__(self) -> None:
+        self.recognizer: Optional[object] = None
+        self.microphone: Optional[object] = None
+        self.fallback_to_text = False
+        self.model = None
+        self._microphone_ready = False
+        self.last_error: Optional[str] = None
+        if sr is not None:
+            try:
+                self.recognizer = sr.Recognizer()
+                self.microphone = sr.Microphone(device_index=0)
+                self._microphone_ready = True
+            except Exception as exc:
+                self.last_error = str(exc)
+                try:
+                    self.recognizer = sr.Recognizer()
+                    self.microphone = sr.Microphone()
+                    self._microphone_ready = True
+                except Exception as exc2:
+                    self.last_error = str(exc2)
+                    self.fallback_to_text = True
+
+        if whisper is not None:
+            try:
+                self.model = whisper.load_model("base")
+            except Exception as exc:
+                self.last_error = str(exc)
+                self.model = None
+
+    def _save_audio(self, audio_data: object, path: str) -> None:
+        with wave.open(path, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(16000)
+            wav_file.writeframes(audio_data.get_wav_data())
+
+    def listen(self, timeout: int = 8, phrase_time_limit: int = 8) -> str:
+        if sr is None or self.recognizer is None or self.microphone is None:
+            self.fallback_to_text = True
+
+        if self.fallback_to_text:
+            print("Microphone is unavailable. Please type your command instead.")
+            if self.last_error:
+                print(f"Reason: {self.last_error}")
+            return input("You: ").strip()
+
+        for attempt in range(2):
+            try:
+                with self.microphone as source:  # type: ignore[union-attr]
+                    self.recognizer.adjust_for_ambient_noise(source, duration=0.2)
+                    audio = self.recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                break
+            except Exception as exc:
+                self.last_error = str(exc)
+                if attempt == 1:
+                    self.fallback_to_text = True
+                    print("Microphone is unavailable. Please type your command instead.")
+                    print(f"Reason: {self.last_error}")
+                    return input("You: ").strip()
+                print("Listening attempt failed. Retrying...")
+
+        temp_path = "temp_audio.wav"
+        try:
+            self._save_audio(audio, temp_path)
+            if self.model is not None:
+                result = self.model.transcribe(temp_path, fp16=False, language="en")
+                os.remove(temp_path)
+                text = result.get("text", "").strip()
+                print(f"Whisper transcription: {text!r}")
+                if text:
+                    return text
+            else:
+                os.remove(temp_path)
+        except Exception as exc:
+            self.last_error = str(exc)
+            print(f"Whisper error: {exc}")
+
+        print("Trying Google transcription fallback...")
+        try:
+            fallback_text = self.recognizer.recognize_google(audio)
+            print(f"Google fallback transcription: {fallback_text!r}")
+            return fallback_text.strip()
+        except Exception as exc:
+            self.last_error = str(exc)
+            print(f"Fallback recognition error: {exc}")
+            return ""
