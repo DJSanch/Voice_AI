@@ -75,7 +75,7 @@ class SpeechController:
                 return "time"
         return normalized
 
-    def listen(self, timeout: int = 8, phrase_time_limit: int = 8) -> str:
+    def listen(self, timeout: int = 20, phrase_time_limit: int = 30) -> str:
         if sr is None or self.recognizer is None or self.microphone is None:
             self.fallback_to_text = True
 
@@ -89,7 +89,7 @@ class SpeechController:
             try:
                 with self.microphone as source:  # type: ignore[union-attr]
                     self.recognizer.adjust_for_ambient_noise(source, duration=0.2)
-                    audio = self.recognizer.listen(source, timeout=max(timeout, 10), phrase_time_limit=max(phrase_time_limit, 10))
+                    audio = self.recognizer.listen(source, timeout=max(timeout, 20), phrase_time_limit=max(phrase_time_limit, 30))
                 break
             except Exception as exc:
                 self.last_error = str(exc)

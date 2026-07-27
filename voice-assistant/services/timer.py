@@ -1,5 +1,6 @@
 import threading
 import time
+import subprocess
 
 
 class TimerService:
@@ -32,6 +33,20 @@ class TimerService:
         time.sleep(seconds)
 
         self.active_timer = None
+
+        # Timer alarm sound
+        try:
+            subprocess.run(
+                [
+                    "afplay",
+                    "/System/Library/Sounds/Glass.aiff"
+                ],
+                check=False
+            )
+
+        except Exception as e:
+            print("Timer sound error:", e)
+
 
         if callback:
             callback("Your timer is finished.")
