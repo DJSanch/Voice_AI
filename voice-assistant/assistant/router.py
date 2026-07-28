@@ -1,3 +1,5 @@
+import re
+
 class CommandRouter:
 
     def __init__(
@@ -9,7 +11,8 @@ class CommandRouter:
         timer,
         notes,
         news,
-        briefing
+        briefing,
+        alarm
     ):
         self.weather = weather
         self.spotify = spotify
@@ -20,7 +23,7 @@ class CommandRouter:
         self.notes = notes
         self.news = news
         self.briefing = briefing
-        
+        self.alarm = alarm
 
 
     def handle(self, command: str) -> str:
@@ -39,7 +42,8 @@ class CommandRouter:
         ):
             return self.briefing.get_briefing()
 
-        # Greetings
+        # Greetings / Conversation
+
         if lowered in {
             "hello",
             "hi",
@@ -47,6 +51,31 @@ class CommandRouter:
             "hey there"
         }:
             return "Hello! How can I help you?"
+
+
+        # Thanks
+        if any(
+            phrase in lowered
+            for phrase in [
+                "thank you",
+                "thanks",
+                "thanks astra",
+                "thank you astra",
+                "i appreciate it"
+            ]
+        ):
+            return "You're welcome, master Daniel."
+
+
+        # Ending conversation
+        if lowered in {
+            "goodbye",
+            "bye",
+            "see you",
+            "that's all",
+            "thats all"
+        }:
+            return "Alright. I'll be here if you need me."
 
 
         # Weather
@@ -69,12 +98,14 @@ class CommandRouter:
         ):
             return self.spotify.current_song()
 
+
         # Pause / Stop
         if (
             "pause" in lowered
             or "stop" in lowered
         ):
             return self.spotify.pause()
+
 
         # Resume
         if (
@@ -84,6 +115,7 @@ class CommandRouter:
             or lowered == "continue music"
         ):
             return self.spotify.resume()
+
 
         # Next song
         if (
@@ -98,6 +130,36 @@ class CommandRouter:
             or "back" in lowered
         ):
             return self.spotify.previous_song()
+        
+        
+        # Play my playlist
+        playlist_words = [
+            "playlist",
+            "play list",
+            "my playlist",
+            "my uwu",
+            "my workout",
+            "my coding"
+        ]
+
+
+        if (
+            ("play" in lowered and "my" in lowered)
+            or "playlist" in lowered
+        ):
+
+            name = (
+                text.lower()
+                .replace("play", "")
+                .replace("my", "")
+                .replace("playlist", "")
+                .replace("list", "")
+                .strip()
+            )
+
+
+            return self.spotify.play_playlist(name)
+
 
         # Play music
         if any(
@@ -116,6 +178,7 @@ class CommandRouter:
 
 
             return self.spotify.play(query)
+
         
         # Open applications
         if lowered.startswith("open ") or lowered.startswith("launch "):
@@ -129,6 +192,7 @@ class CommandRouter:
                 app = text[7:].strip()
 
             return self.system_tools.open_application(app)
+
         
         # Timer
         if "timer" in lowered or self.timer_waiting:
@@ -157,6 +221,7 @@ class CommandRouter:
 
             self.timer_waiting = True
             return "How many minutes should I set the timer for?"
+
         
         # Time
         if lowered in [
@@ -169,6 +234,7 @@ class CommandRouter:
                 f"The current time is "
                 f"{self.system_tools.get_current_time()}."
             )
+
         
         # Notes
         if "take a note" in lowered or "remember" in lowered:
@@ -202,6 +268,7 @@ class CommandRouter:
 
             return self.notes.clear_notes()
         
+
         # News
         if (
             "news" in lowered
@@ -221,6 +288,34 @@ class CommandRouter:
             self.news.open_news()
 
             return self.news.get_news(topic)
+        
+        # Alarm
+        if "alarm" in lowered:
+
+            match = re.search(
+                r'(\d{1,2})[: ](\d{2})',
+                lowered
+            )
+
+            if match:
+
+                hour = int(match.group(1))
+                minute = int(match.group(2))
+
+                # Detect PM
+                if "pm" in lowered and hour < 12:
+                    hour += 12
+
+                # Detect AM
+                if "am" in lowered and hour == 12:
+                    hour = 0
+
+                alarm_time = f"{hour:02d}:{minute:02d}"
+
+                return self.alarm.set_alarm(alarm_time)
+
+            return "What time should I set the alarm for?"
+
 
         # Everything else → LLM
         prompt = (

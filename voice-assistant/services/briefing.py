@@ -24,35 +24,34 @@ class BriefingService:
         current_time = self.system_tools.get_current_time()
 
         self.tts.speak(
-            "Good morning Master Daniel"
+            f"Good morning Master Daniel. "
+            f"The current time is {current_time}."
         )
 
-        self.tts.speak(
-            f"The current time is {current_time}"
-        )
-
+        # Open Weather
         self.weather.open_weather()
 
         weather = self.weather.get_weather()
 
         self.tts.speak(weather)
 
-        sleep(0.1)
 
+        # Open News while news is being announced
         self.news.open_news()
 
         news = self.news.get_news()
 
         self.tts.speak(news)
 
-        sleep(0.1)
 
         notes = self.notes.get_notes()
 
         self.tts.speak(notes)
 
+
         self.tts.speak(
-        "That's everything for your morning briefing. Have a wonderful day Master Daniel."
+            "That's everything for your morning briefing. "
+            "Have a wonderful day Master Daniel."
         )
 
         return "Morning briefing complete."

@@ -88,7 +88,7 @@ class NewsService:
                     f"{index}. {title}"
                 )
 
-            return " ".join(headlines)
+            return "\n\n".join(headlines)
 
         except Exception as e:
             print("News Error:", e)

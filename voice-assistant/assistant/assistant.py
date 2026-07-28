@@ -10,28 +10,36 @@ from services.timer import TimerService
 from services.notes import NotesService
 from services.news import NewsService
 from services.briefing import BriefingService
-
+from services.alarm import AlarmService
 from tools.system import SystemTools
 
 
 class VoiceAssistant:
 
     def __init__(self, name: str = "Astra") -> None:
-        self.name = name
 
-        # Services
+        self.name = name
+        # Speech
         self.speech = SpeechController()
         self.tts = TextToSpeech()
+        self.music_mode = False
 
+        # Tools
         self.system_tools = SystemTools()
+        
 
+
+        # Services
         self.weather = WeatherService()
         self.llm = LLMService()
         self.spotify = SpotifyService()
         self.timer = TimerService()
         self.notes = NotesService()
         self.news = NewsService()
+        
 
+
+        # Briefing
         self.briefing = BriefingService(
             weather=self.weather,
             news=self.news,
@@ -39,9 +47,18 @@ class VoiceAssistant:
             system_tools=self.system_tools,
             tts=self.tts
         )
+        
+
+        # Alarm
+        self.alarm = AlarmService(
+            briefing=self.briefing,
+            spotify=self.spotify,
+            tts=self.tts,
+            speech=self.speech
+        )
 
 
-        # Router
+        # Command Router
         self.router = CommandRouter(
             weather=self.weather,
             spotify=self.spotify,
@@ -50,125 +67,185 @@ class VoiceAssistant:
             timer=self.timer,
             notes=self.notes,
             news=self.news,
-            briefing=self.briefing
+            briefing=self.briefing,
+            alarm=self.alarm
         )
+
+        self.tts.speak(
+            "Astra is online and ready."
+        )
+
 
 
     def handle_command(self, command: str) -> str:
 
         if not command.strip():
-            return "I didn't catch that. Please try again."
+            return "I didn't catch that."
 
         return self.router.handle(command)
 
 
+
     def run(self) -> None:
-
-        spotify_active = False
-
 
         while True:
 
-            # Sleep mode - waiting for wake word
-            wake_command = wait_for_wake_word()
 
+            # SLEEP MODE
+   
+            wake_command = wait_for_wake_word()
 
             if wake_command is None:
                 break
 
 
+
             # Morning briefing
             if wake_command == "good morning":
 
-                self.briefing.get_briefing()
+                briefing = self.briefing.get_briefing()
 
-                print("Briefing complete.")
+                self.tts.speak(briefing)
+
+                print(
+                    "Briefing complete."
+                )
 
                 continue
 
 
 
-            # Normal wake
+            # ACTIVE MODE
+
             self.tts.speak(
                 "Hello master Daniel, how can I help?"
             )
 
 
-            # Active listening mode
             while True:
 
-                print("Listening...")
+                print(
+                    "Listening..."
+                )
+
 
                 command = self.speech.listen(
-                    timeout=10,
+                    timeout=15,
                     phrase_time_limit=100
                 )
 
 
+                # No speech detected
                 if not command:
 
-                    if spotify_active:
+                    if self.music_mode:
+
                         print(
-                            "Spotify active. Still listening..."
+                            "Spotify active. Continuing to listen..."
                         )
+
                         continue
 
-                    else:
-                        print(
-                            "No active session. Returning to wake mode..."
-                        )
-                        break
+
+                    print(
+                        "No response detected."
+                    )
+
+                    self.tts.speak(
+                        "Going back to sleep."
+                    )
+
+                    break
 
 
 
                 lowered = command.lower()
 
 
-                # Spotify started
+
+                # Sleep Commands
+
                 if any(
-                    word in lowered
-                    for word in [
-                        "play",
-                        "spotify",
-                        "music"
+                    phrase in lowered
+                    for phrase in [
+                        "go to sleep",
+                        "sleep mode",
+                        "stop listening"
                     ]
                 ):
-                    spotify_active = True
+                    self.music_mode = False
+
+                    self.tts.speak(
+                        "Going back to sleep."
+                    )
+
+                    break
 
 
+                # Process Command
 
-                # Spotify stopped
+                print(
+                    f"Command received: {command}"
+                )
+
+                if (
+                    "im awake" in lowered
+                    or "i'm awake" in lowered
+                ):
+                    print("Alarm dismissal command ignored.")
+                    continue
+
+
+                response = self.handle_command(
+                    command
+                )
+
+                # Update music state
+
                 if any(
                     phrase in lowered
                     for phrase in [
                         "pause",
-                        "pause music",
-                        "pause spotify",
-                        "stop",
                         "stop music",
-                        "stop spotify"
+                        "pause spotify"
                     ]
                 ):
-                    spotify_active = False
 
+                    self.music_mode = False
 
-
-                response = self.handle_command(command)
-
-                self.tts.speak(response)
-
-
-
-                if spotify_active:
-
-                    print(
-                        "Spotify active. Waiting for next command..."
-                    )
-
-                else:
-
-                    print(
-                        "Command complete. Returning to wake mode..."
-                    )
+                    if response:
+                        self.tts.speak(response)
 
                     break
+
+
+                elif any(
+                    word in lowered
+                    for word in [
+                        "play",
+                        "playlist",
+                        "spotify"
+                    ]
+                ):
+
+                    self.music_mode = True
+
+                
+
+
+                if response:
+
+                    print(
+                        f"Astra: {response}"
+                    )
+
+                    self.tts.speak(
+                        response
+                    )
+
+
+                # Continue Conversation
+
+                print(
+                    "Listening for next command..."
+                )

@@ -8,7 +8,7 @@ except ImportError:
     sr = None
 
 
-def wait_for_wake_word() -> Optional[str]:
+def wait_for_wake_word(alarm_active=False) -> Optional[str]:
     """Wait for the wake phrases 'Astra' or 'Good morning'."""
 
     print("Say 'Astra' or 'Good morning'. Type 'quit' to exit.")
@@ -28,7 +28,7 @@ def wait_for_wake_word() -> Optional[str]:
     recognizer = sr.Recognizer()
 
     # Faster recognition
-    recognizer.pause_threshold = 0.8
+    recognizer.pause_threshold = 0.5
     recognizer.non_speaking_duration = 0.4
     recognizer.phrase_threshold = 0.3
     recognizer.dynamic_energy_threshold = True
@@ -64,12 +64,12 @@ def wait_for_wake_word() -> Optional[str]:
         try:
             with microphone as source:
 
-                print("Listening for wake word...")
+                print("Listening for wake word...", flush=True)
 
                 audio = recognizer.listen(
                     source,
                     timeout=2,
-                    phrase_time_limit=2
+                    phrase_time_limit=5
                 )
 
         except Exception:
@@ -93,5 +93,12 @@ def wait_for_wake_word() -> Optional[str]:
         if "astra" in lowered:
             print("Wake word detected.")
             return "astra"
+        
+        if alarm_active and (
+            "im awake" in lowered
+            or "i'm awake" in lowered
+        ):
+            print("Alarm dismissal detected.")
+            return "im awake"
 
         print(f"Heard: {text}")
