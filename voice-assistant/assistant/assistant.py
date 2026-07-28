@@ -2,7 +2,7 @@ from .router import CommandRouter
 from speech import SpeechController
 from speech import TextToSpeech
 from speech.wakeword import wait_for_wake_word
-
+from services.mac_status import MacStatusService
 from services.weather import WeatherService
 from services.llm import LLMService
 from services.spotify import SpotifyService
@@ -36,6 +36,7 @@ class VoiceAssistant:
         self.timer = TimerService()
         self.notes = NotesService()
         self.news = NewsService()
+        self.mac_status = MacStatusService()
         
 
 
@@ -68,7 +69,8 @@ class VoiceAssistant:
             notes=self.notes,
             news=self.news,
             briefing=self.briefing,
-            alarm=self.alarm
+            alarm=self.alarm,
+            mac_status=self.mac_status
         )
 
         self.tts.speak(

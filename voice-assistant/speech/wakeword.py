@@ -59,12 +59,12 @@ def wait_for_wake_word(alarm_active=False) -> Optional[str]:
         )
 
     # Listen forever
+    print("Listening for wake word...", flush=True)
+
     while True:
 
         try:
             with microphone as source:
-
-                print("Listening for wake word...", flush=True)
 
                 audio = recognizer.listen(
                     source,

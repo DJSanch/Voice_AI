@@ -12,7 +12,8 @@ class CommandRouter:
         notes,
         news,
         briefing,
-        alarm
+        alarm,
+        mac_status
     ):
         self.weather = weather
         self.spotify = spotify
@@ -24,6 +25,7 @@ class CommandRouter:
         self.news = news
         self.briefing = briefing
         self.alarm = alarm
+        self.mac_status = mac_status
 
 
     def handle(self, command: str) -> str:
@@ -86,6 +88,41 @@ class CommandRouter:
                 city = text.lower().split(" in ", 1)[1].title()
             self.weather.open_weather()
             return self.weather.get_weather(city)
+        
+
+        # Full Mac Status
+
+        if (
+            "mac status" in lowered
+            or "check my mac" in lowered
+            or "system status" in lowered
+            or "computer status" in lowered
+        ):
+
+            return self.mac_status.full_status()
+
+        
+        # Mac Awareness
+        if "cpu" in lowered:
+            return self.mac_status.cpu_usage()
+
+        if "memory" in lowered or "ram" in lowered:
+            return self.mac_status.memory_usage()
+
+        if (
+            "storage" in lowered
+            or "disk space" in lowered
+            or "free space" in lowered
+        ):
+            return self.mac_status.disk_space()
+
+        if "battery health" in lowered:
+            return self.mac_status.battery_health()
+
+        if "battery" in lowered:
+            return self.mac_status.battery()
+        
+       
 
 
         # Spotify Controls
@@ -315,7 +352,7 @@ class CommandRouter:
                 return self.alarm.set_alarm(alarm_time)
 
             return "What time should I set the alarm for?"
-
+        
 
         # Everything else → LLM
         prompt = (
