@@ -1,8 +1,8 @@
 import urllib.request
+import urllib.parse
 import json
 import ssl
 import certifi
-import subprocess
 import webbrowser
 
 
@@ -11,30 +11,25 @@ class NewsService:
     def __init__(self):
         self.api_key = "pub_904f349a5c5342e8b486b066955e21da"
 
-        self.url = (
-            "https://newsdata.io/api/1/news?"
-            f"apikey={self.api_key}&"
-            "country=us&"
-            "language=en"
-        )
-
-
-    def get_news(self, topic=None):
+    def get_news(self, topic=None, country="us", limit=5):
 
         try:
 
             if topic:
+
                 url = (
                     "https://newsdata.io/api/1/news?"
                     f"apikey={self.api_key}&"
                     f"q={urllib.parse.quote(topic)}&"
                     "language=en"
                 )
+
             else:
+
                 url = (
                     "https://newsdata.io/api/1/news?"
                     f"apikey={self.api_key}&"
-                    "country=us&"
+                    f"country={country}&"
                     "language=en"
                 )
 
@@ -61,44 +56,72 @@ class NewsService:
 
             articles = data.get("results", [])
 
-            if not articles:
-                if topic:
-                    return f"I couldn't find any news about {topic}."
-                return "No news found."
-
             headlines = []
 
-            if topic:
-                headlines.append(
-                    f"Here are the latest news about {topic}."
-                )
-            else:
-                headlines.append(
-                    "Here are today's top headlines."
-                )
-
-            for index, article in enumerate(articles[:5], start=1):
+            for article in articles[:limit]:
 
                 title = article.get(
                     "title",
                     "Unknown headline"
                 )
 
-                headlines.append(
-                    f"{index}. {title}"
-                )
+                headlines.append(title)
 
-            return "\n\n".join(headlines)
+            return headlines
 
         except Exception as e:
+
             print("News Error:", e)
-            return "I couldn't get the news right now."
-            
+
+            return []
+
+    # ------------------------
+    # Daily Briefing Categories
+    # ------------------------
+
+    def get_daily_news(self):
+
+        return self.get_news()
+
+    def get_badminton_news(self):
+
+        return self.get_news(
+            topic="Badminton OR BWF OR Viktor Axelsen OR An Se-young"
+        )
+
+    def get_ai_news(self):
+
+        return self.get_news(
+            topic="AI OR Artificial Intelligence OR OpenAI OR Anthropic OR Google DeepMind"
+        )
+
+    def get_technology_news(self):
+
+        return self.get_news(
+            topic="Technology OR Tech"
+        )
+
+    # ------------------------
+    # Helper for Daily Briefing
+    # ------------------------
+
+    def get_daily_briefing_news(self):
+
+        return {
+            "Daily News": self.get_daily_news(),
+            "Badminton": self.get_badminton_news(),
+            "AI": self.get_ai_news(),
+            "Technology": self.get_technology_news()
+        }
+
     def open_news(self):
+
         try:
+
             webbrowser.open(
                 "https://news.google.com"
             )
 
         except Exception as e:
+
             print("Open news error:", e)

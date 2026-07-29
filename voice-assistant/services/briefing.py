@@ -21,37 +21,98 @@ class BriefingService:
 
     def get_briefing(self):
 
+        print("\n========== ASTRA MORNING BRIEFING ==========\n")
+
+
+        # Time
         current_time = self.system_tools.get_current_time()
+
+        print("TIME")
+        print("--------------------")
+        print(current_time)
+        print()
 
         self.tts.speak(
             f"Good morning Master Daniel. "
             f"The current time is {current_time}."
         )
 
-        # Open Weather
+
+        # Weather
+        print("WEATHER")
+        print("--------------------")
+
         self.weather.open_weather()
 
         weather = self.weather.get_weather()
 
+        print(weather)
+        print()
+
         self.tts.speak(weather)
 
 
-        # Open News while news is being announced
-        self.news.open_news()
 
-        news = self.news.get_news()
+        # News
+        print("NEWS")
+        print("--------------------")
 
-        self.tts.speak(news)
+        news_categories = self.news.get_daily_briefing_news()
 
+        news_text = "Here are today's news updates. "
+
+        for category, headlines in news_categories.items():
+
+            print(f"\n{category}")
+            print("--------------------")
+
+            news_text += f"{category}. "
+
+            if headlines:
+
+                for index, headline in enumerate(headlines, start=1):
+
+                    print(f"{index}. {headline}")
+
+                    news_text += headline + ". "
+
+            else:
+
+                print("No news available.")
+
+                news_text += "No news available. "
+
+
+
+        print("\n")
+
+
+        self.tts.speak(news_text)
+
+
+
+        # Notes
+        print("NOTES")
+        print("--------------------")
 
         notes = self.notes.get_notes()
 
+        print(notes)
+        print()
+
+
         self.tts.speak(notes)
+
+
+
+        print("============================================")
+        print("Morning briefing complete.\n")
 
 
         self.tts.speak(
             "That's everything for your morning briefing. "
             "Have a wonderful day Master Daniel."
         )
+
 
         return "Morning briefing complete."

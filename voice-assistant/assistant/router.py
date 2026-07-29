@@ -318,16 +318,107 @@ class CommandRouter:
 
             topic = None
 
-            # Topic search
-            if "news for " in lowered:
-                topic = text.split("news for", 1)[1].strip()
+
+            # Category detection
+
+            if "badminton" in lowered:
+
+                headlines = self.news.get_badminton_news()
+                category = "Badminton"
+
+
+            elif (
+                "ai" in lowered
+                or "artificial intelligence" in lowered
+            ):
+
+                headlines = self.news.get_ai_news()
+                category = "AI"
+
+
+            elif (
+                "technology" in lowered
+                or "tech" in lowered
+            ):
+
+                headlines = self.news.get_technology_news()
+                category = "Technology"
+
+
+            # Custom search
+
+            elif "news for " in lowered:
+
+                topic = text.split(
+                    "news for",
+                    1
+                )[1].strip()
+
+                headlines = self.news.get_news(topic)
+                category = topic
+
 
             elif "news regarding " in lowered:
-                topic = text.split("news regarding", 1)[1].strip()
 
-            self.news.open_news()
+                topic = text.split(
+                    "news regarding",
+                    1
+                )[1].strip()
 
-            return self.news.get_news(topic)
+                headlines = self.news.get_news(topic)
+                category = topic
+
+
+            else:
+
+                headlines = self.news.get_daily_news()
+                category = "Daily News"
+
+
+
+            print(
+                f"\n========== {category.upper()} =========="
+            )
+
+
+            if headlines:
+
+                news_text = (
+                    f"Here are the latest {category} updates. "
+                )
+
+
+                for index, headline in enumerate(
+                    headlines,
+                    start=1
+                ):
+
+                    print(
+                        f"{index}. {headline}"
+                    )
+
+                    news_text += (
+                        headline + ". "
+                    )
+
+
+            else:
+
+                print(
+                    "No news available."
+                )
+
+                news_text = (
+                    f"I couldn't find any {category} news right now."
+                )
+
+
+            print(
+                "================================\n"
+            )
+
+
+            return news_text
         
         # Alarm
         if "alarm" in lowered:
