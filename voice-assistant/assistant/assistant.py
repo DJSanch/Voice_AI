@@ -12,6 +12,9 @@ from services.news import NewsService
 from services.briefing import BriefingService
 from services.alarm import AlarmService
 from tools.system import SystemTools
+from services.vision import VisionService
+from services.selection import SelectionService
+
 
 
 class VoiceAssistant:
@@ -37,6 +40,11 @@ class VoiceAssistant:
         self.notes = NotesService()
         self.news = NewsService()
         self.mac_status = MacStatusService()
+        self.selection = SelectionService()
+        self.vision = VisionService(
+            llm=self.llm,
+            selection=self.selection
+        )
         
 
 
@@ -70,7 +78,8 @@ class VoiceAssistant:
             news=self.news,
             briefing=self.briefing,
             alarm=self.alarm,
-            mac_status=self.mac_status
+            mac_status=self.mac_status,
+            vision=self.vision
         )
 
         self.tts.speak(

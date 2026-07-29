@@ -13,7 +13,9 @@ class CommandRouter:
         news,
         briefing,
         alarm,
-        mac_status
+        mac_status,
+        vision
+
     ):
         self.weather = weather
         self.spotify = spotify
@@ -26,6 +28,7 @@ class CommandRouter:
         self.briefing = briefing
         self.alarm = alarm
         self.mac_status = mac_status
+        self.vision = vision
 
 
     def handle(self, command: str) -> str:
@@ -352,6 +355,22 @@ class CommandRouter:
                 return self.alarm.set_alarm(alarm_time)
 
             return "What time should I set the alarm for?"
+            
+        
+        # Computer Vision
+        if any(
+            phrase in lowered
+            for phrase in [
+                "what am i looking at",
+                "analyze this",
+                "read my screen",
+                "look at this",
+                "describe my screen",
+                "check this"
+            ]
+        ):
+
+            return self.vision.analyze_screen()
         
 
         # Everything else → LLM
