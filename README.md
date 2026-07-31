@@ -1,6 +1,6 @@
 # Astra Voice AI Assistant
 
-Astra is a personal AI voice assistant built for macOS. It combines voice control, local AI models, system awareness, computer vision, music control, automation, and network intelligence.
+Astra is Dan's personal AI voice assistant built for macOS. It combines voice control, local AI models, system awareness, computer vision, music control, automation, and network intelligence.
 
 ## Features
 
