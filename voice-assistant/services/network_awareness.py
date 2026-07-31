@@ -9,12 +9,19 @@ from mac_vendor_lookup import MacLookup
 from services.device_memory import DeviceMemory
 from services.device_classifier import DeviceClassifier
 from services.mdns_discovery import MDNSDiscovery
+from services.device_fingerprint import DeviceFingerprint
+from services.dhcp_discovery import DHCPDiscovery
+from services.device_learning import DeviceLearning
 
 class NetworkAwarenessService:
 
     def __init__(self, tts=None):
 
-        self.device_file = "network_devices.json"
+        self.device_file = "data/network_devices.json"
+
+        self.memory_file = "data/known_devices.json"
+
+        self.my_device = self.get_my_mac()
 
         self.tts = tts
 
@@ -24,9 +31,17 @@ class NetworkAwarenessService:
 
         self.memory = DeviceMemory()
 
+        self.learning = DeviceLearning(
+            self.memory
+        )
+
         self.classifier = DeviceClassifier()
 
         self.mdns = MDNSDiscovery()
+
+        self.fingerprint = DeviceFingerprint()
+
+        self.dhcp = DHCPDiscovery()
         
         
 
@@ -69,6 +84,42 @@ class NetworkAwarenessService:
 
 
         except:
+
+            return None
+        
+    
+    # -----------------------------
+    # Detect Astra's MacBook
+    # -----------------------------
+
+    def get_my_mac(self):
+
+        try:
+
+            result = subprocess.check_output(
+                [
+                    "sh",
+                    "-c",
+                    "networksetup -getmacaddress en0"
+                ]
+            ).decode().strip()
+
+
+            # Example:
+            # Wi-Fi MAC Address: aa:bb:cc:dd:ee:ff
+
+            mac = result.split()[-1]
+
+
+            return self.normalize_mac(mac)
+
+
+        except Exception as e:
+
+            print(
+                "Could not detect local MAC:",
+                e
+            )
 
             return None
 
@@ -155,6 +206,8 @@ class NetworkAwarenessService:
 
             mdns_devices = self.mdns.scan()
 
+            dhcp_devices = self.dhcp.get_dhcp_devices()
+
 
             arp = subprocess.check_output(
                 [
@@ -192,6 +245,11 @@ class NetworkAwarenessService:
             devices = self.apply_mdns_names(
                 devices,
                 mdns_devices
+            )
+
+            devices = self.apply_dhcp_names(
+                devices,
+                dhcp_devices
             )
 
 
@@ -273,9 +331,15 @@ class NetworkAwarenessService:
 
         vendor = self.get_vendor(mac)
 
-        device_type = self.classifier.classify(
+        device_owner = self.identify_device(mac)
+
+        fingerprint = self.fingerprint.fingerprint(
+            ip,
             vendor
         )
+
+
+        device_type = fingerprint["fingerprint"]
 
 
         return {
@@ -288,7 +352,13 @@ class NetworkAwarenessService:
 
             "vendor": vendor,
 
-            "type": device_type
+            "type": device_type,
+
+            "services": fingerprint["services"],
+
+            "confidence": fingerprint["confidence"],
+
+            "owner": device_owner
 
         }
 
@@ -332,6 +402,31 @@ class NetworkAwarenessService:
             part.zfill(2)
             for part in parts
         )
+
+
+    # -----------------------------
+    # Identify owner
+    # -----------------------------
+    
+    def identify_device(
+        self,
+        mac
+    ):
+
+        if not self.my_device:
+            return None
+
+
+        if (
+            mac.lower()
+            ==
+            self.my_device.lower()
+        ):
+
+            return "My MacBook"
+
+
+        return None
 
 
 
@@ -400,6 +495,30 @@ class NetworkAwarenessService:
 
 
                     device["hostname"] = name
+
+
+        return devices
+    
+    def apply_dhcp_names(
+        self,
+        devices,
+        dhcp_devices
+    ):
+
+        for device in devices:
+
+            for dhcp in dhcp_devices:
+
+
+                if device["mac"].lower() == dhcp["mac"].lower():
+
+
+                    hostname = dhcp["hostname"]
+
+
+                    if hostname != "?":
+
+                        device["hostname"] = hostname
 
 
         return devices
@@ -531,36 +650,88 @@ class NetworkAwarenessService:
         for device in devices:
 
 
-            known_device = self.memory.get_device(
-                device["mac"]
-            )
+            # Priority:
+            # 1. Your own device
+            # 2. Remembered devices
+            # 3. Hostname
+            # 4. Manufacturer
 
 
-            if known_device:
+            if device.get("owner"):
 
-                device_name = known_device["name"]
+                device_name = device["owner"]
 
-                device_type = known_device["type"]
+                device_type = "Personal Computer"
+
 
 
             else:
 
-                device_name = (
-                    device["hostname"]
-                    if device["hostname"] != "Unknown device"
-                    else device["vendor"]
+                known_device = (
+                    self.memory.get_device(
+                        device["mac"]
+                    )
                 )
 
-                device_type = device["type"]
+
+                if known_device:
+
+                    device_name = (
+                        known_device["name"]
+                    )
+
+                    device_type = (
+                        known_device["type"]
+                    )
+
+
+                elif device["hostname"] not in [
+                    "?",
+                    "Unknown device",
+                    ""
+                ]:
+
+                    device_name = (
+                        device["hostname"]
+                    )
+
+                    device_type = (
+                        device["type"]
+                    )
+
+
+                else:
+
+                    device_name = (
+                        device["vendor"]
+                    )
+
+                    device_type = (
+                        device["type"]
+                    )
 
 
 
             report += (
+
                 f"Device: {device_name}\n"
+
                 f"Type: {device_type}\n"
+
                 f"{device['ip']}\n"
-                f"Manufacturer: {device['vendor']}\n"
+
+                f"Manufacturer: "
+                f"{device['vendor']}\n"
+
+                f"Services: "
+                f"{', '.join(device.get('services', [])) or 'None'}\n"
+
+                f"Confidence: "
+                f"{device.get('confidence',0)}%\n"
+
+        
                 f"{device['mac']}\n\n"
+
             )
 
 

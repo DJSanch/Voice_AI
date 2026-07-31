@@ -1,13 +1,13 @@
 import json
 import os
+from datetime import datetime
 
 
 class DeviceMemory:
 
-
     def __init__(self):
 
-        self.file = "known_devices.json"
+        self.file = "data/known_devices.json"
 
 
     def load(self):
@@ -15,12 +15,26 @@ class DeviceMemory:
         if not os.path.exists(self.file):
             return {}
 
-        with open(self.file) as f:
-            return json.load(f)
+
+        try:
+
+            with open(self.file, "r") as f:
+                return json.load(f)
+
+
+        except json.JSONDecodeError:
+
+            return {}
 
 
 
     def save(self, devices):
+
+        os.makedirs(
+            "data",
+            exist_ok=True
+        )
+
 
         with open(
             self.file,
@@ -39,7 +53,8 @@ class DeviceMemory:
         self,
         mac,
         name,
-        device_type
+        device_type,
+        owner="Daniel"
     ):
 
         devices = self.load()
@@ -49,14 +64,24 @@ class DeviceMemory:
 
             "name": name,
 
-            "type": device_type
+            "type": device_type,
+
+            "owner": owner,
+
+            "times_seen": 0,
+
+            "first_seen": datetime.now().strftime(
+                "%Y-%m-%d %H:%M"
+            ),
+
+            "last_seen": datetime.now().strftime(
+                "%Y-%m-%d %H:%M"
+            )
 
         }
 
 
-        self.save(
-            devices
-        )
+        self.save(devices)
 
 
 
@@ -67,6 +92,30 @@ class DeviceMemory:
 
         devices = self.load()
 
-        return devices.get(
-            mac
+
+        device = devices.get(mac)
+
+
+        if not device:
+            return None
+
+
+        device["times_seen"] = (
+            device.get(
+                "times_seen",
+                0
+            ) + 1
         )
+
+
+        device["last_seen"] = (
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M"
+            )
+        )
+
+
+        self.save(devices)
+
+
+        return device

@@ -86,7 +86,7 @@ class NewsService:
     def get_badminton_news(self):
 
         return self.get_news(
-            topic="Badminton OR BWF OR Viktor Axelsen OR An Se-young"
+            topic="Badminton OR BWF OR Badminton Tournaments OR Badminton Championships OR Badminton Rankings"
         )
 
     def get_ai_news(self):

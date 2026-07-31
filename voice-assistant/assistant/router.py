@@ -33,6 +33,9 @@ class CommandRouter:
         self.vision = vision
         self.hand_tracking = hand_tracking
         self.network = network
+        self.pending_action = None
+        self.pending_devices = []
+        self.selected_device = None
 
 
     def handle(self, command: str) -> str:
@@ -281,7 +284,7 @@ class CommandRouter:
 
         
         # Notes
-        if "take a note" in lowered or "remember" in lowered:
+        if "take a note" in lowered:
 
             note = text
 
@@ -485,6 +488,77 @@ class CommandRouter:
 
             return "I couldn't capture the object."
         
+        
+        # -----------------------------
+        # Device Learning Memory
+        # -----------------------------
+
+
+        if self.pending_action == "remember_device":
+
+            for device in self.pending_devices:
+
+                if (
+                    lowered in device["vendor"].lower()
+                    or lowered in device["type"].lower()
+                ):
+
+                    self.selected_device = device
+
+                    self.pending_action = "device_name"
+
+
+                    return (
+                        f"I found {device['vendor']}. "
+                        "What name should I save for this device?"
+                    )
+
+
+
+        if self.pending_action == "device_name":
+
+            name = text.strip()
+
+
+            self.network.memory.add_device(
+
+                mac=self.selected_device["mac"],
+
+                name=name,
+
+                device_type=self.selected_device["type"]
+
+            )
+
+
+            self.pending_action = None
+
+            self.pending_devices = []
+
+            return (
+                f"Saved. I will remember "
+                f"{name}."
+            )
+
+
+
+        if "remember this device" in lowered:
+
+            devices = self.network.scan_devices()
+
+
+            self.pending_action = "remember_device"
+
+            self.pending_devices = devices
+
+
+            return (
+                f"I found {len(devices)} devices. "
+                "Which device should I remember?"
+            )
+
+
+
         # Network Awareness
 
         if (
@@ -494,6 +568,7 @@ class CommandRouter:
         ):
 
             return self.network.network_report()
+
 
         # Everything else → LLM
         prompt = (

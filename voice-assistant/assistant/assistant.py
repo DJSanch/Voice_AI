@@ -51,6 +51,8 @@ class VoiceAssistant:
         self.network = NetworkAwarenessService(
             self.tts
         )
+        self.pending_action = None
+        self.pending_devices = []
         
 
 
