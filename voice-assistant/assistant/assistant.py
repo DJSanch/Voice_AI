@@ -14,6 +14,8 @@ from services.alarm import AlarmService
 from tools.system import SystemTools
 from services.vision import VisionService
 from services.selection import SelectionService
+from services.hand_tracking import HandTrackingService
+from services.network_awareness import NetworkAwarenessService
 
 
 
@@ -44,6 +46,10 @@ class VoiceAssistant:
         self.vision = VisionService(
             llm=self.llm,
             selection=self.selection
+        )
+        self.hand_tracking = HandTrackingService()
+        self.network = NetworkAwarenessService(
+            self.tts
         )
         
 
@@ -79,7 +85,9 @@ class VoiceAssistant:
             briefing=self.briefing,
             alarm=self.alarm,
             mac_status=self.mac_status,
-            vision=self.vision
+            vision=self.vision,
+            hand_tracking=self.hand_tracking,
+            network=self.network
         )
 
         self.tts.speak(

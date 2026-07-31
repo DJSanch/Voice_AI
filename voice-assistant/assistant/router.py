@@ -14,7 +14,9 @@ class CommandRouter:
         briefing,
         alarm,
         mac_status,
-        vision
+        vision,
+        hand_tracking,
+        network
 
     ):
         self.weather = weather
@@ -29,6 +31,8 @@ class CommandRouter:
         self.alarm = alarm
         self.mac_status = mac_status
         self.vision = vision
+        self.hand_tracking = hand_tracking
+        self.network = network
 
 
     def handle(self, command: str) -> str:
@@ -455,14 +459,41 @@ class CommandRouter:
                 "what am i looking at",
                 "analyze this",
                 "read my screen",
-                "look at this",
                 "describe my screen",
-                "check this"
             ]
         ):
 
             return self.vision.analyze_screen()
         
+        # Object Identification
+
+        if (
+            "what am i holding" in lowered
+            or "identify this object" in lowered
+            or "what is this" in lowered
+        ):
+
+            image = self.hand_tracking.capture_hand_region()
+
+
+            if image:
+
+                return self.vision.analyze_object(
+                    image
+                )
+
+
+            return "I couldn't capture the object."
+        
+        # Network Awareness
+
+        if (
+            "network status" in lowered
+            or "show network devices" in lowered
+            or "who is connected" in lowered
+        ):
+
+            return self.network.network_report()
 
         # Everything else → LLM
         prompt = (

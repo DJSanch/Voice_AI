@@ -96,3 +96,52 @@ class VisionService:
             "I captured your screen, "
             "but I could not analyze it."
         )
+    
+    def analyze_object(self, image_path):
+
+        vision_prompt = """
+        You are Astra, a helpful AI assistant.
+
+        Look carefully at the object the person is holding.
+
+        Describe the object in one short sentence.
+
+        Include:
+        - The object name
+        - Color
+        - Visible Text
+        - Shape or visible features
+        - Any recognizable details
+
+        If you are uncertain, say:
+        "I am not completely sure, but it looks like..."
+        """
+        
+
+        description = self.llm.ask_image(
+            vision_prompt,
+            image_path
+        )
+
+
+        reasoning_prompt = f"""
+
+        {description}
+
+        Give:
+        - Object name
+        - Short explanation
+        - suggest other brands related to the object:
+            if the brand suggest that it does not support the object make sure to rule it out and recommend that it is this kind of object.
+          
+
+        Keep it conversational.
+        """
+
+
+        answer = self.llm.ask(
+            reasoning_prompt
+        )
+
+
+        return answer

@@ -35,10 +35,12 @@ class MacStatusService:
             2
         )
 
+        percent = memory.percent
+
         return (
-            f"Memory usage is "
-            f"{used} gigabytes out of "
-            f"{total} gigabytes."
+            f"Memory usage is {used} gigabytes "
+            f"out of {total} gigabytes, "
+            f"which is {percent} percent."
         )
 
 
@@ -160,49 +162,121 @@ class MacStatusService:
         except:
 
             return "External drive information unavailable."
+        
+    
+    def recommendations(self):
+
+        recommendations = []
+
+        # CPU
+        cpu = psutil.cpu_percent(interval=0.5)
+
+        if cpu >= 90:
+            recommendations.append(
+                "CPU usage is very high. Consider closing demanding applications or checking Activity Monitor."
+            )
+
+        elif cpu >= 70:
+            recommendations.append(
+                "CPU usage is moderately high. If your Mac feels slow, close unused applications."
+            )
+
+
+        # Memory
+        memory = psutil.virtual_memory()
+
+        if memory.percent >= 90:
+            recommendations.append(
+                "Memory usage is critically high. Closing unused apps or restarting your Mac is recommended."
+            )
+
+        elif memory.percent >= 80:
+            recommendations.append(
+                "Memory usage is high. Closing applications you are not using may improve performance."
+            )
+
+
+        # Storage
+        disk = shutil.disk_usage("/")
+
+        free_gb = disk.free / (1024 ** 3)
+
+        free_percent = (disk.free / disk.total) * 100
+
+        if free_gb < 15 or free_percent < 10:
+            recommendations.append(
+                "Storage is running low. Consider deleting large files, emptying the Trash, or moving files to an external drive."
+            )
+
+
+        # Battery
+        battery = psutil.sensors_battery()
+
+        if battery:
+
+            if battery.percent <= 20 and not battery.power_plugged:
+
+                recommendations.append(
+                    "Battery is low. Consider connecting your charger."
+                )
+
+
+        # Docker
+        try:
+
+            result = subprocess.check_output(
+                [
+                    "docker",
+                    "ps",
+                    "--format",
+                    "{{.Names}}"
+                ]
+            ).decode()
+
+            running = len(result.splitlines())
+
+            if running >= 5:
+
+                recommendations.append(
+                    f"Docker currently has {running} running containers. Stop unused containers to free resources."
+                )
+
+        except:
+            pass
+
+
+        if not recommendations:
+
+            return (
+                "Everything looks healthy. No maintenance is recommended at the moment."
+            )
+
+
+        return (
+            "Recommendations: "
+            + " ".join(recommendations)
+        )
 
 
 
     def full_status(self):
 
-        status = (
+        return (
+            "Here is your Mac status.\n\n"
 
-            "Here is your Mac status. "
+            f"{self.cpu_usage()}\n"
 
-            +
-            self.cpu_usage()
-            +
-            " "
+            f"{self.memory_usage()}\n"
 
-            +
-            self.memory_usage()
-            +
-            " "
+            f"{self.disk_space()}\n"
 
-            +
-            self.disk_space()
-            +
-            " "
+            f"{self.battery()}\n"
 
-            +
-            self.battery()
-            +
-            " "
+            f"{self.wifi_status()}\n"
 
-            +
-            self.wifi_status()
-            +
-            " "
+            f"{self.docker_status()}\n"
 
-            +
-            self.docker_status()
-            +
-            " "
+            f"{self.external_drives()}\n\n"
 
-            +
-            self.external_drives()
-
+            f"{self.recommendations()}"
         )
-
-
-        return status

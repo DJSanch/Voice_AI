@@ -52,7 +52,7 @@ class LLMService:
 
         payload = {
 
-            "model": "llava:7b",
+            "model": "moondream",
 
             "prompt": prompt,
 
