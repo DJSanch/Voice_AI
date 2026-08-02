@@ -3,7 +3,7 @@
         "hostname": "Unknown device",
         "ip": "192.168.0.1",
         "mac": "10:33:bf:ee:e1:22",
-        "vendor": "Vantiva USA LLC",
+        "vendor": "Unknown manufacturer",
         "type": "Network Device",
         "services": [
             "HTTP",
@@ -13,7 +13,7 @@
         "owner": null
     },
     {
-        "hostname": "Unknown device",
+        "hostname": "Dan\u2019s MacBook Air._airplay._tcp",
         "ip": "192.168.0.102",
         "mac": "56:00:67:ac:da:0b",
         "vendor": "Unknown manufacturer",
@@ -27,9 +27,19 @@
     },
     {
         "hostname": "Unknown device",
+        "ip": "192.168.0.120",
+        "mac": "18:de:50:67:ba:5b",
+        "vendor": "Unknown manufacturer",
+        "type": "Unknown Device",
+        "services": [],
+        "confidence": 20,
+        "owner": null
+    },
+    {
+        "hostname": "Unknown device",
         "ip": "192.168.0.128",
         "mac": "b8:06:0d:c4:b1:9a",
-        "vendor": "Tuya Smart Inc.",
+        "vendor": "Unknown manufacturer",
         "type": "Unknown Device",
         "services": [],
         "confidence": 20,
@@ -39,17 +49,7 @@
         "hostname": "Unknown device",
         "ip": "192.168.0.183",
         "mac": "10:09:f9:38:82:27",
-        "vendor": "Amazon Technologies Inc.",
-        "type": "Amazon Smart Device",
-        "services": [],
-        "confidence": 80,
-        "owner": null
-    },
-    {
-        "hostname": "Unknown device",
-        "ip": "192.168.0.195",
-        "mac": "e0:d8:c4:75:1d:e4",
-        "vendor": "Qingdao Intelligent&Precise Electronics Co.,Ltd.",
+        "vendor": "Unknown manufacturer",
         "type": "Unknown Device",
         "services": [],
         "confidence": 20,
@@ -57,8 +57,8 @@
     },
     {
         "hostname": "Unknown device",
-        "ip": "192.168.0.196",
-        "mac": "b6:f9:e5:6b:31:56",
+        "ip": "192.168.0.195",
+        "mac": "e0:d8:c4:75:1d:e4",
         "vendor": "Unknown manufacturer",
         "type": "Unknown Device",
         "services": [],
@@ -69,17 +69,7 @@
         "hostname": "Unknown device",
         "ip": "192.168.0.197",
         "mac": "d4:91:0f:c0:90:66",
-        "vendor": "Amazon Technologies Inc.",
-        "type": "Amazon Smart Device",
-        "services": [],
-        "confidence": 80,
-        "owner": null
-    },
-    {
-        "hostname": "Unknown device",
-        "ip": "192.168.0.198",
-        "mac": "c4:cb:76:a6:c9:d9",
-        "vendor": "Microsoft Corporation",
+        "vendor": "Unknown manufacturer",
         "type": "Unknown Device",
         "services": [],
         "confidence": 20,
@@ -99,10 +89,10 @@
         "hostname": "Unknown device",
         "ip": "192.168.0.226",
         "mac": "fc:65:de:a3:a4:6e",
-        "vendor": "Amazon Technologies Inc.",
-        "type": "Amazon Smart Device",
+        "vendor": "Unknown manufacturer",
+        "type": "Unknown Device",
         "services": [],
-        "confidence": 80,
+        "confidence": 20,
         "owner": null
     },
     {

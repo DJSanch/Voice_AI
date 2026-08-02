@@ -12,6 +12,7 @@ from services.mdns_discovery import MDNSDiscovery
 from services.device_fingerprint import DeviceFingerprint
 from services.dhcp_discovery import DHCPDiscovery
 from services.device_learning import DeviceLearning
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class NetworkAwarenessService:
 
@@ -144,27 +145,26 @@ class NetworkAwarenessService:
     # -----------------------------
     # Network discovery
     # -----------------------------
-
     def ping_scan(self):
 
         subnet = self.get_network_prefix()
 
-
         if not subnet:
             return
 
+        hosts = [
+            subnet + str(i)
+            for i in range(1, 255)
+        ]
 
-        print(
-            "Scanning network..."
-        )
+        total = len(hosts)
+        completed = 0
 
+        print("Scanning network...")
 
-        for host in range(1, 255):
+        def ping(ip):
 
-            ip = subnet + str(host)
-
-
-            subprocess.Popen(
+            subprocess.run(
                 [
                     "ping",
                     "-c",
@@ -177,9 +177,52 @@ class NetworkAwarenessService:
                 stderr=subprocess.DEVNULL
             )
 
+            return ip
 
-        time.sleep(3)
 
+        with ThreadPoolExecutor(
+            max_workers=50
+        ) as executor:
+
+            futures = [
+                executor.submit(
+                    ping,
+                    ip
+                )
+                for ip in hosts
+            ]
+
+
+            for future in as_completed(futures):
+
+                completed += 1
+
+                self.show_progress(
+                    completed,
+                    total
+                )
+
+
+        print("\nScan complete.")
+    
+
+    def show_progress(self, current, total):
+
+        bar_length = 30
+
+        percent = current / total
+
+        filled = int(bar_length * percent)
+
+        bar = "█" * filled + "░" * (
+            bar_length - filled
+        )
+
+        print(
+            f"\rScanning network [{bar}] {percent*100:.0f}%",
+            end="",
+            flush=True
+        )
 
 
     # -----------------------------
@@ -192,15 +235,7 @@ class NetworkAwarenessService:
 
         seen = set()
 
-
         try:
-
-            if self.tts:
-
-                self.tts.speak(
-                    "Scanning network."
-                )
-
 
             self.ping_scan()
 
@@ -571,17 +606,20 @@ class NetworkAwarenessService:
         previous = self.load_devices()
 
 
-        old = {
-            d["mac"]
-            for d in previous
+        previous_macs = {
+            device["mac"]
+            for device in previous
         }
 
 
-        return [
+        new_devices = [
             device
             for device in current
-            if device["mac"] not in old
+            if device["mac"] not in previous_macs
         ]
+
+
+        return new_devices
 
 
 
@@ -621,20 +659,89 @@ class NetworkAwarenessService:
             f"{upload / 1024:.2f} KB/s."
 
         )
+    
+
+    def monitor_new_devices(self):
+
+        previous = {
+            d["mac"]
+            for d in self.load_devices()
+        }
+
+        while True:
+
+            current = self.scan_devices()
+
+            current_macs = {
+                d["mac"]
+                for d in current
+            }
+
+            new = current_macs - previous
+
+            for device in current:
+
+                if device["mac"] in new:
+
+                    name = (
+                        device["hostname"]
+                        if device["hostname"] not in ["", "?", "Unknown device"]
+                        else device["vendor"]
+                    )
+
+                    message = f"New device detected: {name}"
+
+                    print(message)
+
+                    if self.tts:
+                        self.tts.speak(message)
+
+            previous = current_macs
+
+            time.sleep(30)
+        
+    
+    def detect_new_devices(self):
+
+        current = self.scan_devices()
+
+        previous = self.load_devices()
+
+
+        previous_macs = {
+            device["mac"]
+            for device in previous
+        }
+
+
+        new_devices = [
+            device
+            for device in current
+            if device["mac"] not in previous_macs
+        ]
+
+
+        return new_devices
 
 
 
     # -----------------------------
     # Astra report
     # -----------------------------
-
     def network_report(self):
 
-        devices = self.scan_devices()
+        if self.tts:
+            self.tts.speak(
+                "Scanning network."
+            )
+
+        # Scan and detect changes
+        new_devices = self.detect_new_devices()
+
+        devices = self.load_devices()
 
 
         if not devices:
-
             return (
                 "I could not find any devices "
                 "on your network."
@@ -647,42 +754,52 @@ class NetworkAwarenessService:
         )
 
 
+        # New device notification
+        if new_devices:
+
+            report += "New devices detected:\n"
+
+            for device in new_devices:
+
+                name = (
+                    device["hostname"]
+                    if device["hostname"] not in [
+                        "",
+                        "?",
+                        "Unknown device"
+                    ]
+                    else device["vendor"]
+                )
+
+                report += (
+                    f"- {name} "
+                    f"({device['ip']})\n"
+                )
+
+
+            report += "\n"
+
+
+        # Device details
         for device in devices:
-
-
-            # Priority:
-            # 1. Your own device
-            # 2. Remembered devices
-            # 3. Hostname
-            # 4. Manufacturer
-
 
             if device.get("owner"):
 
                 device_name = device["owner"]
-
                 device_type = "Personal Computer"
-
 
 
             else:
 
-                known_device = (
-                    self.memory.get_device(
-                        device["mac"]
-                    )
+                known_device = self.memory.get_device(
+                    device["mac"]
                 )
 
 
                 if known_device:
 
-                    device_name = (
-                        known_device["name"]
-                    )
-
-                    device_type = (
-                        known_device["type"]
-                    )
+                    device_name = known_device["name"]
+                    device_type = known_device["type"]
 
 
                 elif device["hostname"] not in [
@@ -691,46 +808,28 @@ class NetworkAwarenessService:
                     ""
                 ]:
 
-                    device_name = (
-                        device["hostname"]
-                    )
-
-                    device_type = (
-                        device["type"]
-                    )
+                    device_name = device["hostname"]
+                    device_type = device["type"]
 
 
                 else:
 
-                    device_name = (
-                        device["vendor"]
-                    )
-
-                    device_type = (
-                        device["type"]
-                    )
+                    device_name = device["vendor"]
+                    device_type = device["type"]
 
 
 
             report += (
 
                 f"Device: {device_name}\n"
-
                 f"Type: {device_type}\n"
-
-                f"{device['ip']}\n"
-
-                f"Manufacturer: "
-                f"{device['vendor']}\n"
-
+                f"IP: {device['ip']}\n"
+                f"Manufacturer: {device['vendor']}\n"
                 f"Services: "
                 f"{', '.join(device.get('services', [])) or 'None'}\n"
-
                 f"Confidence: "
-                f"{device.get('confidence',0)}%\n"
-
-        
-                f"{device['mac']}\n\n"
+                f"{device.get('confidence', 0)}%\n"
+                f"MAC: {device['mac']}\n\n"
 
             )
 

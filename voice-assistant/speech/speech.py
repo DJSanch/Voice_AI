@@ -188,189 +188,50 @@ class SpeechController:
 
     def listen(
         self,
-        timeout: int = 20,
-        phrase_time_limit: int = 60
-    ) -> str:
+        timeout=20,
+        phrase_time_limit=60
+    ):
 
-        with self.mic_lock:
+        try:
 
-            if (
-                sr is None
-                or self.recognizer is None
-                or self.microphone is None
-            ):
+            with self.microphone as source:
 
-                self.fallback_to_text = True
+                if not self.calibrated:
 
-
-            if self.fallback_to_text:
-
-                print(
-                    "Microphone unavailable. Type command."
-                )
-
-                return input(
-                    "You: "
-                ).strip()
-
-
-
-        for attempt in range(2):
-
-            try:
-
-                with self.microphone as source:
-
-
-                    # Calibrate only once
-                    if not self.calibrated:
-
-                        print(
-                            "Calibrating microphone..."
-                        )
-
-                        self.recognizer.adjust_for_ambient_noise(
-                            source,
-                            duration=0.2
-                        )
-
-                        self.calibrated = True
-
-
-
-                    audio = self.recognizer.listen(
+                    self.recognizer.adjust_for_ambient_noise(
                         source,
-                        timeout=timeout,
-                        phrase_time_limit=phrase_time_limit
+                        duration=0.5
                     )
 
-
-                break
-
-
-            except Exception as exc:
-
-                self.last_error = str(exc)
-
-                if attempt == 1:
-
-                    self.fallback_to_text = True
-
-                    return input(
-                        "You: "
-                    ).strip()
+                    self.calibrated = True
 
 
-                print(
-                    "Listening failed. Retrying..."
+                audio = self.recognizer.listen(
+                    source,
+                    timeout=timeout,
+                    phrase_time_limit=phrase_time_limit
                 )
 
 
-
-        temp_path = "temp_audio.wav"
-
-
-        try:
-
-            self._save_audio(
-                audio,
-                temp_path
-            )
-
-
-            if self.model is not None:
-
-                result = self.model.transcribe(
-                    temp_path,
-                    fp16=False,
-                    language="en"
-                )
-
-
-                os.remove(
-                    temp_path
-                )
-
-
-                text = result.get(
-                    "text",
-                    ""
-                ).strip()
-
-
-                print(
-                    f"Whisper transcription: {text!r}"
-                )
-
-
-                if text:
-
-                    normalized = self._dataset_hint(
-                        text
-                    )
-
-                    print(
-                        f"Normalized command: {normalized!r}"
-                    )
-
-                    return normalized
-
-
-            else:
-
-                os.remove(
-                    temp_path
-                )
-
-
-
-        except Exception as exc:
-
-            self.last_error = str(exc)
-
-            print(
-                f"Whisper error: {exc}"
-            )
-
-
-
-        print(
-            "Trying Google transcription fallback..."
-        )
-
-
-        try:
-
-            fallback_text = self.recognizer.recognize_google(
+            text = self.recognizer.recognize_google(
                 audio
             )
 
 
             print(
-                f"Google fallback transcription: {fallback_text!r}"
+                f"Google transcription: {text}"
             )
 
 
-            normalized = self._dataset_hint(
-                fallback_text
+            return self._normalize_command(
+                text
             )
-
-
-            print(
-                f"Normalized command: {normalized!r}"
-            )
-
-
-            return normalized
-
 
 
         except Exception as exc:
 
-            self.last_error = str(exc)
-
             print(
-                f"Fallback recognition error: {exc}"
+                f"Speech error: {exc}"
             )
 
             return ""

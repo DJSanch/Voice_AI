@@ -7,7 +7,7 @@ import urllib.request
 from tools.network import NetworkTools
 
 
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "data/config.json"
 
 
 class WeatherService:

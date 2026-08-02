@@ -16,7 +16,8 @@ from services.vision import VisionService
 from services.selection import SelectionService
 from services.hand_tracking import HandTrackingService
 from services.network_awareness import NetworkAwarenessService
-
+from services.security_awareness import SecurityAwarenessService
+from plugins.plugin_manager import PluginManager
 
 
 class VoiceAssistant:
@@ -51,12 +52,15 @@ class VoiceAssistant:
         self.network = NetworkAwarenessService(
             self.tts
         )
+        self.security = SecurityAwarenessService(
+            self.network
+        )
+
         self.pending_action = None
         self.pending_devices = []
-        
 
 
-        # Briefing
+                # Briefing
         self.briefing = BriefingService(
             weather=self.weather,
             news=self.news,
@@ -75,6 +79,28 @@ class VoiceAssistant:
         )
 
 
+                # Plugin
+        self.plugin_manager = PluginManager()
+
+        services = {
+            "weather": self.weather,
+            "mac_status": self.mac_status,
+            "network": self.network,
+            "security": self.security,
+            "spotify": self.spotify,
+            "notes": self.notes,
+            "timer": self.timer,
+            "system_tools": self.system_tools,
+            "alarm": self.alarm,
+            "vision": self.vision,
+            "hand_tracking": self.hand_tracking,
+            "plugin_manager": self.plugin_manager,
+            "tts": self.tts,
+        }
+
+        self.plugin_manager.load_plugins(services)
+
+
         # Command Router
         self.router = CommandRouter(
             weather=self.weather,
@@ -89,7 +115,9 @@ class VoiceAssistant:
             mac_status=self.mac_status,
             vision=self.vision,
             hand_tracking=self.hand_tracking,
-            network=self.network
+            network=self.network,
+            security=self.security,
+            plugin_manager=self.plugin_manager
         )
 
         self.tts.speak(
