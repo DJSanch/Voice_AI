@@ -1,0 +1,11 @@
+{
+  "status": "listening",
+  "mode": "wake",
+  "activity": "Listening for wake word",
+  "last_command": "",
+  "last_response": "",
+  "updated_at": "2026-08-02T13:22:49",
+  "details": {
+    "voice_strength": 0.009747176786832897
+  }
+}

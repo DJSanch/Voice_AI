@@ -1,4 +1,5 @@
 from plugins.base_plugin import BasePlugin
+from services.dashboard import update_dashboard_state
 
 
 class NetworkPlugin(BasePlugin):
@@ -32,4 +33,16 @@ class NetworkPlugin(BasePlugin):
 
     def handle(self, command):
 
-        return self.network.network_report()
+        report = self.network.network_report()
+        update_dashboard_state(
+            status="active",
+            mode="network",
+            activity="Network devices displayed",
+            last_command=command,
+            last_response=report,
+            details={
+                "network_panel": True,
+                "network_devices": self.network.last_network_report,
+            },
+        )
+        return report

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import math
 import os
+import struct
 import wave
 from pathlib import Path
 from typing import Optional
 import threading
+
+from services.dashboard import update_dashboard_state
 
 try:
     import speech_recognition as sr
@@ -108,6 +112,22 @@ class SpeechController:
             )
 
 
+    def _measure_voice_strength(
+        self,
+        audio_data: object
+    ) -> float:
+        raw = audio_data.get_raw_data(convert_rate=16000, convert_width=2)
+        if not raw:
+            return 0.0
+
+        sample_count = len(raw) // 2
+        if sample_count == 0:
+            return 0.0
+
+        samples = struct.unpack(f"<{sample_count}h", raw)
+        rms = math.sqrt(sum(sample * sample for sample in samples) / sample_count)
+        return min(1.0, rms / 16000.0)
+
 
     def _normalize_command(
         self,
@@ -194,6 +214,12 @@ class SpeechController:
 
         try:
 
+            update_dashboard_state(
+                status="listening",
+                mode="conversation",
+                activity="Listening for your voice command",
+            )
+
             with self.microphone as source:
 
                 if not self.calibrated:
@@ -212,6 +238,14 @@ class SpeechController:
                     phrase_time_limit=phrase_time_limit
                 )
 
+            voice_strength = self._measure_voice_strength(audio)
+
+            update_dashboard_state(
+                status="listening",
+                mode="conversation",
+                activity="Capturing audio intensity",
+                details={"voice_strength": voice_strength},
+            )
 
             text = self.recognizer.recognize_google(
                 audio
@@ -222,10 +256,18 @@ class SpeechController:
                 f"Google transcription: {text}"
             )
 
+            normalized = self._normalize_command(text)
 
-            return self._normalize_command(
-                text
+            update_dashboard_state(
+                status="processing",
+                mode="conversation",
+                activity="Voice command captured",
+                last_command=text,
+                last_response="",
+                details={"voice_strength": voice_strength},
             )
+
+            return normalized
 
 
         except Exception as exc:

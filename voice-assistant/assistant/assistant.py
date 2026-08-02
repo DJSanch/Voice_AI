@@ -17,6 +17,7 @@ from services.selection import SelectionService
 from services.hand_tracking import HandTrackingService
 from services.network_awareness import NetworkAwarenessService
 from services.security_awareness import SecurityAwarenessService
+from services.dashboard import update_dashboard_state
 from plugins.plugin_manager import PluginManager
 
 
@@ -120,6 +121,12 @@ class VoiceAssistant:
             plugin_manager=self.plugin_manager
         )
 
+        update_dashboard_state(
+            status="online",
+            mode="sleep",
+            activity="Astra is online and ready.",
+        )
+
         self.tts.speak(
             "Astra is online and ready."
         )
@@ -142,9 +149,20 @@ class VoiceAssistant:
 
             # SLEEP MODE
    
+            update_dashboard_state(
+                status="listening",
+                mode="wake",
+                activity="Listening for wake word",
+            )
+
             wake_command = wait_for_wake_word()
 
             if wake_command is None:
+                update_dashboard_state(
+                    status="idle",
+                    mode="sleep",
+                    activity="Wake word not detected",
+                )
                 break
 
 
@@ -153,6 +171,13 @@ class VoiceAssistant:
             if wake_command == "good morning":
 
                 briefing = self.briefing.get_briefing()
+
+                update_dashboard_state(
+                    status="speaking",
+                    mode="briefing",
+                    activity="Delivered morning briefing",
+                    last_response=briefing,
+                )
 
                 self.tts.speak(briefing)
 
@@ -166,6 +191,12 @@ class VoiceAssistant:
 
             # ACTIVE MODE
 
+            update_dashboard_state(
+                status="active",
+                mode="conversation",
+                activity="Awaiting your voice command",
+            )
+
             self.tts.speak(
                 "Hello master Daniel, how can I help?"
             )
@@ -177,6 +208,11 @@ class VoiceAssistant:
                     "Listening..."
                 )
 
+                update_dashboard_state(
+                    status="listening",
+                    mode="conversation",
+                    activity="Listening for a command",
+                )
 
                 command = self.speech.listen(
                     timeout=15,
@@ -209,8 +245,12 @@ class VoiceAssistant:
 
 
                 lowered = command.lower()
-
-
+                update_dashboard_state(
+                    status="processing",
+                    mode="conversation",
+                    activity="Received a voice command",
+                    last_command=command,
+                )
 
                 # Sleep Commands
 
@@ -247,6 +287,14 @@ class VoiceAssistant:
 
                 response = self.handle_command(
                     command
+                )
+
+                update_dashboard_state(
+                    status="responding",
+                    mode="conversation",
+                    activity="Processed the voice command",
+                    last_command=command,
+                    last_response=response,
                 )
 
                 # Update music state

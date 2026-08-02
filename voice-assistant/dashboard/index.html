@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoiceAI Command Center</title>
+    <link rel="stylesheet" href="styles.css?v=5" />
+  </head>
+  <body>
+    <div class="aurora"></div>
+    <div class="grid-overlay"></div>
+
+    <main class="dashboard-shell">
+      <div class="debug-badge">Dashboard build v3</div>
+      <div class="dashboard-layout">
+        <section class="left-column">
+          <header class="hero-card">
+            <div>
+              <p class="eyebrow">VoiceAI / Live Control Panel</p>
+              <h1>Command Center</h1>
+              <p class="subtitle">
+                A focused view of your assistant’s awareness, security, and daily flow.
+              </p>
+            </div>
+            <div class="hero-badge">
+              <span class="status-dot"></span>
+              <div>
+                <strong id="dashboard-status">SYSTEM ONLINE</strong>
+                <p id="current-time">--:--</p>
+                <p id="dashboard-mode" class="meta-text">Sleep mode</p>
+              </div>
+            </div>
+          </header>
+
+          <section class="stats-grid">
+            <article class="stat-card">
+              <p>Wakeword</p>
+              <h2>Active</h2>
+              <span>Listening for “Hey Astra”</span>
+            </article>
+            <article class="stat-card">
+              <p>Devices Seen</p>
+              <h2>12</h2>
+              <span>4 new this session</span>
+            </article>
+            <article class="stat-card">
+              <p>Security</p>
+              <h2>Secure</h2>
+              <span>2 alerts reviewed</span>
+            </article>
+            <article class="stat-card">
+              <p>Context Mode</p>
+              <h2>Focus</h2>
+              <span>Quiet environment detected</span>
+            </article>
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">System Health</p>
+                <h3>Performance</h3>
+              </div>
+            </div>
+            <div class="meter-group">
+              <div class="meter-row">
+                <label>Latency</label>
+                <div class="meter"><span style="width: 86%"></span></div>
+              </div>
+              <div class="meter-row">
+                <label>Memory</label>
+                <div class="meter"><span style="width: 64%"></span></div>
+              </div>
+              <div class="meter-row">
+                <label>Speech Confidence</label>
+                <div class="meter"><span style="width: 92%"></span></div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="center-column">
+          <section class="voice-orb-card is-active">
+            <div class="orb-core">
+              <div class="orb-sphere">
+                <div class="orb-glow"></div>
+                <div class="voice-wave-rings" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="orb-core-inner">
+                  <p class="eyebrow">Voice Input</p>
+                  <h3 id="orb-label">Listening</h3>
+                  <span id="orb-subtext">Ready for your command</span>
+                  <div class="orb-status">
+                    <div id="voice-wave" class="voice-wave is-idle" aria-hidden="true">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <p id="voice-state-label" class="voice-label">Standby</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+        <section class="right-column" aria-hidden="true">
+          <section class="panel panel-large network-panel">
+            <div class="panel-header">
+              <div>
+                <p id="panel-type" class="eyebrow">Network</p>
+                <h3 id="panel-title">Connected Devices</h3>
+              </div>
+              <button id="close-network-panel" class="ghost-btn">Close</button>
+            </div>
+            <div class="network-panel-content">
+              <p id="network-summary" class="meta-text">Scanning network devices...</p>
+              <div id="network-report-text" class="network-report-text">Waiting for network scan results...</div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <script src="app.js?v=5"></script>
+  </body>
+</html>

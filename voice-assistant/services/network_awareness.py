@@ -38,6 +38,8 @@ class NetworkAwarenessService:
 
         self.classifier = DeviceClassifier()
 
+        self.last_network_report: list[dict] = []
+
         self.mdns = MDNSDiscovery()
 
         self.fingerprint = DeviceFingerprint()
@@ -736,10 +738,9 @@ class NetworkAwarenessService:
             )
 
         # Scan and detect changes
-        new_devices = self.detect_new_devices()
-
-        devices = self.load_devices()
-
+        previous_devices = self.load_devices()
+        devices = self.scan_devices()
+        self.last_network_report = devices
 
         if not devices:
             return (
@@ -753,14 +754,21 @@ class NetworkAwarenessService:
             "devices on your network.\n\n"
         )
 
+        previous_macs = {
+            device["mac"]
+            for device in previous_devices
+        }
+
+        new_devices = [
+            device
+            for device in devices
+            if device["mac"] not in previous_macs
+        ]
 
         # New device notification
         if new_devices:
-
             report += "New devices detected:\n"
-
             for device in new_devices:
-
                 name = (
                     device["hostname"]
                     if device["hostname"] not in [
@@ -770,13 +778,10 @@ class NetworkAwarenessService:
                     ]
                     else device["vendor"]
                 )
-
                 report += (
                     f"- {name} "
                     f"({device['ip']})\n"
                 )
-
-
             report += "\n"
 
 
@@ -820,20 +825,18 @@ class NetworkAwarenessService:
 
 
             report += (
+            f"Device: {device_name}\n"
+            f"Type: {device_type}\n"
+            f"IP: {device['ip']}\n"
+            f"Manufacturer: {device['vendor']}\n"
+            f"Services: "
+            f"{', '.join(device.get('services', [])) or 'None'}\n"
+            f"Confidence: "
+            f"{device.get('confidence', 0)}%\n"
+            f"MAC: {device['mac']}\n\n"
+        )
 
-                f"Device: {device_name}\n"
-                f"Type: {device_type}\n"
-                f"IP: {device['ip']}\n"
-                f"Manufacturer: {device['vendor']}\n"
-                f"Services: "
-                f"{', '.join(device.get('services', [])) or 'None'}\n"
-                f"Confidence: "
-                f"{device.get('confidence', 0)}%\n"
-                f"MAC: {device['mac']}\n\n"
-
-            )
-
-
+        self.save_devices(devices)
         report += self.bandwidth()
 
 

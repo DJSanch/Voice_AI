@@ -1,4 +1,5 @@
 from plugins.base_plugin import BasePlugin
+from services.dashboard import update_dashboard_state
 
 
 class SecurityPlugin(BasePlugin):
@@ -51,16 +52,27 @@ class SecurityPlugin(BasePlugin):
 
 
         if not new_devices:
-
-            return (
-                "Security scan complete. "
-                "No new devices detected."
+            response = (
+                "Security scan complete. No new devices detected."
             )
+        else:
+            response = "New devices detected:\n"
+            for device in new_devices:
+                response += (
+                    f"{device['vendor']} "
+                    f"at {device['ip']}.\n"
+                )
 
-
-        response = (
-            "New devices detected:\n"
+        update_dashboard_state(
+            status="active",
+            mode="security",
+            activity="Security scan displayed",
+            last_command=command,
+            last_response=response,
+            details={"security_panel": True},
         )
+
+        return response
 
 
         for device in new_devices:
