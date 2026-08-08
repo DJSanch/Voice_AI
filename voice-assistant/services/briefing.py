@@ -19,9 +19,14 @@ class BriefingService:
         self.tts = tts
 
 
-    def get_briefing(self):
+    def get_briefing(self, on_progress=None):
 
         print("\n========== ASTRA MORNING BRIEFING ==========\n")
+        briefing_lines = ["========== ASTRA MORNING BRIEFING ==========", "", "TIME", "--------------------"]
+
+        def publish_progress():
+            if on_progress:
+                on_progress("\n".join(briefing_lines))
 
 
         # Time
@@ -31,11 +36,7 @@ class BriefingService:
         print("--------------------")
         print(current_time)
         print()
-
-        self.tts.speak(
-            f"Good morning Master Daniel. "
-            f"The current time is {current_time}."
-        )
+        briefing_lines.extend([current_time, "", "WEATHER", "--------------------"])
 
 
         # Weather
@@ -48,8 +49,7 @@ class BriefingService:
 
         print(weather)
         print()
-
-        self.tts.speak(weather)
+        briefing_lines.extend([weather, "", "NEWS", "--------------------"])
 
 
 
@@ -65,6 +65,7 @@ class BriefingService:
 
             print(f"\n{category}")
             print("--------------------")
+            briefing_lines.extend(["", category, "--------------------"])
 
             news_text += f"{category}. "
 
@@ -73,22 +74,20 @@ class BriefingService:
                 for index, headline in enumerate(headlines, start=1):
 
                     print(f"{index}. {headline}")
+                    briefing_lines.append(f"{index}. {headline}")
 
                     news_text += headline + ". "
 
             else:
 
                 print("No news available.")
+                briefing_lines.append("No news available.")
 
                 news_text += "No news available. "
 
 
 
         print("\n")
-
-
-        self.tts.speak(news_text)
-
 
 
         # Notes
@@ -99,20 +98,23 @@ class BriefingService:
 
         print(notes)
         print()
-
-
-        self.tts.speak(notes)
-
-
+        briefing_lines.extend(["", "NOTES", "--------------------", notes, "", "============================================", "Morning briefing complete."])
+        publish_progress()
 
         print("============================================")
         print("Morning briefing complete.\n")
 
-
+        self.tts.speak(
+            f"Good morning Master Daniel. "
+            f"The current time is {current_time}."
+        )
+        self.tts.speak(weather)
+        self.tts.speak(news_text)
+        self.tts.speak(notes)
         self.tts.speak(
             "That's everything for your morning briefing. "
             "Have a wonderful day Master Daniel."
         )
 
 
-        return "Morning briefing complete."
+        return "\n".join(briefing_lines)

@@ -1,5 +1,4 @@
 from plugins.base_plugin import BasePlugin
-from services.dashboard import update_dashboard_state
 
 
 class SecurityPlugin(BasePlugin):
@@ -62,15 +61,6 @@ class SecurityPlugin(BasePlugin):
                     f"{device['vendor']} "
                     f"at {device['ip']}.\n"
                 )
-
-        update_dashboard_state(
-            status="active",
-            mode="security",
-            activity="Security scan displayed",
-            last_command=command,
-            last_response=response,
-            details={"security_panel": True},
-        )
 
         return response
 

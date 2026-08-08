@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from services.dashboard import update_dashboard_state
-
 try:
     import speech_recognition as sr
 except ImportError:
@@ -86,31 +84,14 @@ def wait_for_wake_word(alarm_active=False) -> Optional[str]:
         lowered = text.lower()
 
         if lowered in {"quit", "exit"}:
-            update_dashboard_state(
-                status="idle",
-                mode="sleep",
-                activity="Voice session ended",
-            )
             return None
 
         if "good morning" in lowered:
             print("Morning briefing wake detected.")
-            update_dashboard_state(
-                status="active",
-                mode="briefing",
-                activity="Wake word detected: good morning",
-                last_command=text,
-            )
             return "good morning"
 
         if "astra" in lowered:
             print("Wake word detected.")
-            update_dashboard_state(
-                status="active",
-                mode="conversation",
-                activity="Wake word detected: Astra",
-                last_command=text,
-            )
             return "astra"
         
         if alarm_active and (
@@ -120,10 +101,4 @@ def wait_for_wake_word(alarm_active=False) -> Optional[str]:
             print("Alarm dismissal detected.")
             return "im awake"
 
-        update_dashboard_state(
-            status="listening",
-            mode="wake",
-            activity="Heard a voice cue",
-            last_command=text,
-        )
         print(f"Heard: {text}")

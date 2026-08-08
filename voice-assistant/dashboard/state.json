@@ -1,11 +1,8 @@
 {
-  "status": "listening",
-  "mode": "wake",
-  "activity": "Listening for wake word",
-  "last_command": "",
-  "last_response": "",
-  "updated_at": "2026-08-02T13:22:49",
-  "details": {
-    "voice_strength": 0.009747176786832897
-  }
+  "status": "ready",
+  "activity": "Astra has completed your Dashboard request.",
+  "last_command": "Show Network Devices",
+  "last_response": "I found 9 devices on your network.\n\nDevice: Vantiva USA LLC\nType: Network Device\nIP: 192.168.0.1\nManufacturer: Vantiva USA LLC\nServices: HTTP, HTTPS\nConfidence: 60%\nMAC: 10:33:bf:ee:e1:22\n\nDevice: Daniel's MacBook Air\nType: Personal Computer\nIP: 192.168.0.102\nManufacturer: Unknown manufacturer\nServices: AirPlay, AirPlay\nConfidence: 85%\nMAC: 56:00:67:ac:da:0b\n\nDevice: Tuya Smart Inc.\nType: Unknown Device\nIP: 192.168.0.120\nManufacturer: Tuya Smart Inc.\nServices: None\nConfidence: 20%\nMAC: 18:de:50:67:ba:5b\n\nDevice: Tuya Smart Inc.\nType: Unknown Device\nIP: 192.168.0.128\nManufacturer: Tuya Smart Inc.\nServices: None\nConfidence: 20%\nMAC: b8:06:0d:c4:b1:9a\n\nDevice: Amazon Technologies Inc.\nType: Amazon Smart Device\nIP: 192.168.0.183\nManufacturer: Amazon Technologies Inc.\nServices: None\nConfidence: 80%\nMAC: 10:09:f9:38:82:27\n\nDevice: Default Room._airplay._tcp\nType: Apple Device\nIP: 192.168.0.195\nManufacturer: Qingdao Intelligent&Precise Electronics Co.,Ltd.\nServices: AirPlay\nConfidence: 85%\nMAC: e0:d8:c4:75:1d:e4\n\nDevice: Amazon Technologies Inc.\nType: Amazon Smart Device\nIP: 192.168.0.197\nManufacturer: Amazon Technologies Inc.\nServices: None\nConfidence: 80%\nMAC: d4:91:0f:c0:90:66\n\nDevice: Unknown manufacturer\nType: Unknown Device\nIP: 192.168.0.208\nManufacturer: Unknown manufacturer\nServices: None\nConfidence: 20%\nMAC: fe:25:1d:68:10:d8\n\nDevice: Amazon Technologies Inc.\nType: Amazon Smart Device\nIP: 192.168.0.226\nManufacturer: Amazon Technologies Inc.\nServices: None\nConfidence: 80%\nMAC: fc:65:de:a3:a4:6e\n\nDownload speed: 10.00 KB/s. Upload speed: 10.00 KB/s.",
+  "updated_at": "2026-08-08T23:31:03.618900+00:00",
+  "live_response": ""
 }

@@ -27,6 +27,16 @@
     },
     {
         "hostname": "Unknown device",
+        "ip": "192.168.0.120",
+        "mac": "18:de:50:67:ba:5b",
+        "vendor": "Tuya Smart Inc.",
+        "type": "Unknown Device",
+        "services": [],
+        "confidence": 20,
+        "owner": null
+    },
+    {
+        "hostname": "Unknown device",
         "ip": "192.168.0.128",
         "mac": "b8:06:0d:c4:b1:9a",
         "vendor": "Tuya Smart Inc.",
@@ -46,25 +56,15 @@
         "owner": null
     },
     {
-        "hostname": "Unknown device",
+        "hostname": "Default Room._airplay._tcp",
         "ip": "192.168.0.195",
         "mac": "e0:d8:c4:75:1d:e4",
         "vendor": "Qingdao Intelligent&Precise Electronics Co.,Ltd.",
-        "type": "Unknown Device",
-        "services": [],
-        "confidence": 20,
-        "owner": null
-    },
-    {
-        "hostname": "Unknown device",
-        "ip": "192.168.0.196",
-        "mac": "b6:f9:e5:6b:31:56",
-        "vendor": "Unknown manufacturer",
-        "type": "Unknown Device",
+        "type": "Apple Device",
         "services": [
-            "Apple Device Sync"
+            "AirPlay"
         ],
-        "confidence": 20,
+        "confidence": 85,
         "owner": null
     },
     {
@@ -75,16 +75,6 @@
         "type": "Amazon Smart Device",
         "services": [],
         "confidence": 80,
-        "owner": null
-    },
-    {
-        "hostname": "Unknown device",
-        "ip": "192.168.0.198",
-        "mac": "c4:cb:76:a6:c9:d9",
-        "vendor": "Microsoft Corporation",
-        "type": "Unknown Device",
-        "services": [],
-        "confidence": 20,
         "owner": null
     },
     {

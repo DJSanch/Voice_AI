@@ -29,7 +29,7 @@ class SpotifyPlugin(BasePlugin):
                 "pause",
                 "resume",
                 "skip",
-                "next song",
+                "next",
                 "previous",
                 "what song",
                 "what's playing"

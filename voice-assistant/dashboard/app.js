@@ -1,140 +1,99 @@
-const timeLabel = document.getElementById("current-time");
-const statusLabel = document.getElementById("dashboard-status");
-const modeLabel = document.getElementById("dashboard-mode");
-const activityLabel = document.getElementById("dashboard-activity");
-const commandLabel = document.getElementById("dashboard-command");
-const responseLabel = document.getElementById("dashboard-response");
-const voiceWave = document.getElementById("voice-wave");
-const voiceStateLabel = document.getElementById("voice-state-label");
-const orbCard = document.querySelector(".voice-orb-card");
-const orbLabel = document.getElementById("orb-label");
-const orbSubtext = document.getElementById("orb-subtext");
-const rightColumn = document.querySelector(".right-column");
-const panelType = document.getElementById("panel-type");
-const panelTitle = document.getElementById("panel-title");
-const networkSummary = document.getElementById("network-summary");
-const networkReportText = document.getElementById("network-report-text");
-const closeNetworkPanel = document.getElementById("close-network-panel");
-let networkPanelDismissed = false;
+const $ = (selector) => document.querySelector(selector);
+const stateUrl = '/api/state';
+const devicesUrl = '/data/network_devices.json';
+const securityUrl = '/data/security_events.json';
 
-function updateTime() {
+function setText(selector, value) { $(selector).textContent = value; }
+function titleCase(value) { return value ? value.replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Offline'; }
+
+function renderConversation(lastResponse, liveResponse) {
+  const container = $('#conversation-history');
+  const message = document.createElement('div');
+  const label = document.createElement('span');
+  const text = document.createElement('p');
+  message.className = 'message astra';
+  label.textContent = liveResponse ? 'Astra · live update' : 'Astra · most recent reply';
+  text.textContent = liveResponse || lastResponse || 'I’m ready when you are.';
+  message.append(label, text);
+  container.replaceChildren(message);
+}
+
+function updateClock() {
   const now = new Date();
-  timeLabel.textContent = now.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  setText('#clock', now.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }));
+  setText('#daypart', now.getHours() < 12 ? 'morning' : now.getHours() < 18 ? 'afternoon' : 'evening');
 }
 
-function renderState(state) {
-  if (!state) return;
-
-  const statusText = state.status ? state.status.toUpperCase() : "SYSTEM ONLINE";
-  const modeText = state.mode ? state.mode.replace(/\b\w/g, (char) => char.toUpperCase()) : "Sleep";
-  const normalizedStatus = (state.status || "idle").toLowerCase();
-  const voiceStrength = Number(state.details?.voice_strength ?? state.voice_strength ?? 0);
-  const waveStrength = Math.min(1, Math.max(0.15, voiceStrength));
-
-  statusLabel.textContent = statusText;
-  modeLabel.textContent = `${modeText} mode`;
-  if (activityLabel) {
-    activityLabel.textContent = state.activity || "Awaiting voice interaction";
-  }
-  if (commandLabel) {
-    commandLabel.textContent = `Last command: ${state.last_command || "—"}`;
-  }
-  if (responseLabel) {
-    responseLabel.textContent = `Last response: ${state.last_response || "—"}`;
-  }
-
-  orbCard?.style.setProperty("--voice-wave-strength", waveStrength.toFixed(2));
-  voiceWave?.classList.remove("is-idle", "is-listening", "is-speaking", "is-processing");
-  orbCard?.classList.remove("is-speaking", "is-listening", "is-processing");
-
-  if (normalizedStatus === "listening") {
-    voiceWave?.classList.add("is-listening");
-    if (voiceStateLabel) voiceStateLabel.textContent = "Listening";
-    orbCard?.classList.add("is-active");
-    orbLabel.textContent = "Listening";
-    orbSubtext.textContent = "Your command is being captured";
-  } else if (normalizedStatus === "processing") {
-    voiceWave?.classList.add("is-processing");
-    orbCard?.classList.add("is-processing");
-    if (voiceStateLabel) voiceStateLabel.textContent = "Processing";
-    orbCard?.classList.add("is-active");
-    orbLabel.textContent = "Processing";
-    orbSubtext.textContent = "Analyzing your request";
-  } else if (normalizedStatus === "responding" || normalizedStatus === "speaking" || normalizedStatus === "active") {
-    voiceWave?.classList.add("is-speaking");
-    orbCard?.classList.add("is-speaking");
-    if (voiceStateLabel) voiceStateLabel.textContent = normalizedStatus === "active" ? "Active" : "Speaking";
-    orbCard?.classList.add("is-active");
-    orbLabel.textContent = normalizedStatus === "active" ? "Active" : "Speaking";
-    orbSubtext.textContent = "Voice response in progress";
-  } else {
-    voiceWave?.classList.add("is-idle");
-    if (voiceStateLabel) voiceStateLabel.textContent = "Standby";
-    orbCard?.classList.remove("is-active");
-    orbLabel.textContent = "Ready";
-    orbSubtext.textContent = "Ready for your command";
-  }
-
-  const networkEnabled = Boolean(state.details?.network_panel);
-  const securityEnabled = Boolean(state.details?.security_panel);
-
-  if (networkEnabled && !networkPanelDismissed) {
-    rightColumn.classList.add("visible");
-    panelType.textContent = "Network";
-    panelTitle.textContent = "Connected Devices";
-    networkSummary.textContent = state.last_response?.split("\n")[0] || "Network devices";
-    if (networkReportText) {
-      networkReportText.textContent = state.last_response || "No network report available.";
-    }
-  } else if (securityEnabled && !networkPanelDismissed) {
-    rightColumn.classList.add("visible");
-    panelType.textContent = "Security";
-    panelTitle.textContent = "Security Report";
-    networkSummary.textContent = state.last_response?.split("\n")[0] || "Security overview";
-    if (networkReportText) {
-      networkReportText.textContent = state.last_response || "No security report available.";
-    }
-  } else {
-    rightColumn.classList.remove("visible");
-    if (networkReportText) {
-      networkReportText.textContent = "";
-    }
-  }
-}
-
-closeNetworkPanel?.addEventListener("click", () => {
-  networkPanelDismissed = true;
-  rightColumn.classList.remove("visible");
-});
-
-async function refreshState() {
+async function loadState() {
   try {
-    const response = await fetch(`state.json?ts=${Date.now()}`);
-    if (!response.ok) throw new Error("state unavailable");
+    const response = await fetch(`${stateUrl}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('State unavailable');
     const state = await response.json();
-    renderState(state);
-  } catch (error) {
-    console.warn("Dashboard state unavailable", error);
+    const online = state.status && state.status !== 'offline';
+    setText('#status', titleCase(state.status));
+    setText('#activity', state.activity || 'Astra is standing by.');
+    renderConversation(state.last_response, state.live_response);
+    setText('#voice-mode', online ? titleCase(state.status) : 'Standing by');
+    setText('#voice-health', online ? 'Active' : 'Waiting');
+    setText('#updated', state.updated_at ? `Last update ${new Date(state.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Astra has not published an update yet.');
+    $('#connection-dot').parentElement.classList.toggle('offline', !online);
+    setText('#connection-label', online ? 'LOCAL CONNECTED' : 'LOCAL OFFLINE');
+  } catch (_) {
+    $('#connection-dot').parentElement.classList.add('offline');
+    setText('#connection-label', 'LOCAL OFFLINE');
   }
 }
 
-updateTime();
-refreshState();
-setInterval(updateTime, 1000);
-setInterval(refreshState, 1200);
+async function loadDevices() {
+  try {
+    const response = await fetch(devicesUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Device data unavailable');
+    const devices = await response.json();
+    setText('#network-count', `${devices.length} devices`);
+    setText('#device-total', devices.length);
+    const list = $('#device-list');
+    list.replaceChildren(...devices.slice(0, 4).map((device) => {
+      const item = document.createElement('li');
+      const identity = document.createElement('span');
+      const name = document.createElement('strong');
+      const detail = document.createElement('small');
+      const type = document.createElement('span');
+      name.textContent = device.hostname || 'Unknown device';
+      detail.textContent = device.vendor || device.ip || 'Local network';
+      type.className = 'device-type';
+      type.textContent = device.type || 'DEVICE';
+      identity.append(name, detail);
+      item.append(identity, type);
+      return item;
+    }));
+  } catch (_) { setText('#network-health', 'Unavailable'); }
+}
 
-const commandButtons = document.querySelectorAll(".cmd-btn");
-commandButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const originalText = button.textContent;
-    button.textContent = "Queued";
-    button.disabled = true;
-    setTimeout(() => {
-      button.textContent = originalText;
-      button.disabled = false;
-    }, 1400);
-  });
-});
+async function loadSecurity() {
+  try {
+    const response = await fetch(securityUrl, { cache: 'no-store' });
+    const events = response.ok ? await response.json() : [];
+    setText('#security-status', events.length ? `${events.length} alert${events.length === 1 ? '' : 's'}` : 'No alerts');
+    setText('#security-health', events.length ? 'Attention' : 'Ready');
+  } catch (_) { setText('#security-health', 'Unavailable'); }
+}
+
+document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', async () => {
+  const phrase = button.dataset.command;
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/commands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: phrase }),
+    });
+    if (!response.ok) throw new Error('Command rejected');
+    setText('#command-hint', `Sent to Astra: “${phrase}”`);
+    loadState();
+  } catch (_) {
+    setText('#command-hint', 'Could not reach Astra. Start the voice assistant, then open http://localhost:8080.');
+  } finally { button.disabled = false; }
+}));
+
+updateClock(); loadState(); loadDevices(); loadSecurity();
+setInterval(updateClock, 30_000); setInterval(loadState, 1_000); setInterval(loadDevices, 30_000); setInterval(loadSecurity, 30_000);

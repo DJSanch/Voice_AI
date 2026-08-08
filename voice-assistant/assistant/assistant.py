@@ -17,8 +17,9 @@ from services.selection import SelectionService
 from services.hand_tracking import HandTrackingService
 from services.network_awareness import NetworkAwarenessService
 from services.security_awareness import SecurityAwarenessService
-from services.dashboard import update_dashboard_state
+from services.dashboard import get_dashboard_command, update_dashboard_state
 from plugins.plugin_manager import PluginManager
+from threading import Lock, Thread
 
 
 class VoiceAssistant:
@@ -30,6 +31,8 @@ class VoiceAssistant:
         self.speech = SpeechController()
         self.tts = TextToSpeech()
         self.music_mode = False
+        self._command_lock = Lock()
+        self._briefing_lock = Lock()
 
         # Tools
         self.system_tools = SystemTools()
@@ -122,10 +125,15 @@ class VoiceAssistant:
         )
 
         update_dashboard_state(
-            status="online",
-            mode="sleep",
+            status="ready",
             activity="Astra is online and ready.",
+            live_response="",
         )
+        Thread(
+            target=self._run_dashboard_commands,
+            daemon=True,
+            name="astra-dashboard-commands",
+        ).start()
 
         self.tts.speak(
             "Astra is online and ready."
@@ -138,7 +146,70 @@ class VoiceAssistant:
         if not command.strip():
             return "I didn't catch that."
 
-        return self.router.handle(command)
+        with self._command_lock:
+            return self.router.handle(command)
+
+
+    def _run_dashboard_commands(self) -> None:
+        """Run dashboard commands without waiting for microphone input."""
+        while True:
+            command = get_dashboard_command(timeout=1)
+            if not command:
+                continue
+
+            lowered = command.lower()
+            update_dashboard_state(
+                status="processing",
+                activity="Processing a Dashboard command.",
+                last_command=command,
+                live_response=f"Working on: {command}",
+            )
+
+            is_briefing = any(
+                phrase in lowered
+                for phrase in ("good morning", "daily briefing", "morning briefing")
+            )
+            if is_briefing:
+                response = self._deliver_briefing()
+                if response is None:
+                    continue
+            else:
+                response = self.handle_command(command)
+                update_dashboard_state(
+                    status="responding",
+                    activity="Astra is responding to your Dashboard request.",
+                    last_command=command,
+                    last_response=response,
+                )
+                if response:
+                    self.tts.speak(response)
+
+            update_dashboard_state(
+                status="ready",
+                activity="Astra has completed your Dashboard request.",
+                last_command=command,
+                last_response=response if is_briefing else None,
+            )
+
+
+    def _publish_briefing_progress(self, briefing: str) -> None:
+        update_dashboard_state(
+            status="responding",
+            activity="Delivering your morning briefing.",
+            live_response=briefing,
+        )
+
+
+    def _deliver_briefing(self) -> str | None:
+        """Deliver one briefing at a time to prevent wake-word echo repeats."""
+        if not self._briefing_lock.acquire(blocking=False):
+            return None
+        try:
+            return self.briefing.get_briefing(
+                on_progress=self._publish_briefing_progress
+            )
+        finally:
+            self._briefing_lock.release()
 
 
 
@@ -151,35 +222,29 @@ class VoiceAssistant:
    
             update_dashboard_state(
                 status="listening",
-                mode="wake",
-                activity="Listening for wake word",
+                activity="Listening for the wake word.",
             )
-
             wake_command = wait_for_wake_word()
 
             if wake_command is None:
                 update_dashboard_state(
-                    status="idle",
-                    mode="sleep",
-                    activity="Wake word not detected",
+                    status="offline",
+                    activity="Voice session ended.",
                 )
                 break
-
-
 
             # Morning briefing
             if wake_command == "good morning":
 
-                briefing = self.briefing.get_briefing()
+                briefing = self._deliver_briefing()
+                if briefing is None:
+                    continue
 
                 update_dashboard_state(
-                    status="speaking",
-                    mode="briefing",
-                    activity="Delivered morning briefing",
+                    status="responding",
+                    activity="Delivering your morning briefing.",
                     last_response=briefing,
                 )
-
-                self.tts.speak(briefing)
 
                 print(
                     "Briefing complete."
@@ -190,12 +255,6 @@ class VoiceAssistant:
 
 
             # ACTIVE MODE
-
-            update_dashboard_state(
-                status="active",
-                mode="conversation",
-                activity="Awaiting your voice command",
-            )
 
             self.tts.speak(
                 "Hello master Daniel, how can I help?"
@@ -210,8 +269,7 @@ class VoiceAssistant:
 
                 update_dashboard_state(
                     status="listening",
-                    mode="conversation",
-                    activity="Listening for a command",
+                    activity="Listening for a voice command.",
                 )
 
                 command = self.speech.listen(
@@ -245,13 +303,30 @@ class VoiceAssistant:
 
 
                 lowered = command.lower()
+
+                if self.music_mode:
+                    is_pause_command = any(
+                        phrase in lowered
+                        for phrase in ("pause", "stop music", "pause spotify")
+                    )
+                    is_next_command = any(
+                        phrase in lowered
+                        for phrase in ("next", "skip")
+                    )
+                    if not (is_pause_command or is_next_command):
+                        update_dashboard_state(
+                            status="listening",
+                            activity="Music is playing. Listening for pause or next.",
+                        )
+                        print("Music mode: ignored non-playback command.")
+                        continue
+
                 update_dashboard_state(
                     status="processing",
-                    mode="conversation",
-                    activity="Received a voice command",
+                    activity="Processing your voice command.",
                     last_command=command,
+                    live_response=f"Working on: {command}",
                 )
-
                 # Sleep Commands
 
                 if any(
@@ -291,8 +366,7 @@ class VoiceAssistant:
 
                 update_dashboard_state(
                     status="responding",
-                    mode="conversation",
-                    activity="Processed the voice command",
+                    activity="Astra has completed your request.",
                     last_command=command,
                     last_response=response,
                 )
@@ -330,7 +404,12 @@ class VoiceAssistant:
                 
 
 
-                if response:
+                is_briefing = any(
+                    phrase in lowered
+                    for phrase in ["good morning", "daily briefing", "morning briefing"]
+                )
+
+                if response and not is_briefing:
 
                     print(
                         f"Astra: {response}"

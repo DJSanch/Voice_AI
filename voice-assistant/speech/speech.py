@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Optional
 import threading
 
-from services.dashboard import update_dashboard_state
-
 try:
     import speech_recognition as sr
 except ImportError:
@@ -214,12 +212,6 @@ class SpeechController:
 
         try:
 
-            update_dashboard_state(
-                status="listening",
-                mode="conversation",
-                activity="Listening for your voice command",
-            )
-
             with self.microphone as source:
 
                 if not self.calibrated:
@@ -240,13 +232,6 @@ class SpeechController:
 
             voice_strength = self._measure_voice_strength(audio)
 
-            update_dashboard_state(
-                status="listening",
-                mode="conversation",
-                activity="Capturing audio intensity",
-                details={"voice_strength": voice_strength},
-            )
-
             text = self.recognizer.recognize_google(
                 audio
             )
@@ -257,15 +242,6 @@ class SpeechController:
             )
 
             normalized = self._normalize_command(text)
-
-            update_dashboard_state(
-                status="processing",
-                mode="conversation",
-                activity="Voice command captured",
-                last_command=text,
-                last_response="",
-                details={"voice_strength": voice_strength},
-            )
 
             return normalized
 

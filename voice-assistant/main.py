@@ -3,6 +3,7 @@ import sys
 from assistant import VoiceAssistant
 from dataset import VoiceDatasetCollector
 from diagnostics import AudioDiagnostics
+from services.dashboard_server import start_dashboard_server
 from tools.startup_check import StartupCheck
 
 
@@ -22,6 +23,7 @@ def main() -> None:
     # Background mode (LaunchAgent)
     if "--background" in sys.argv:
 
+        start_dashboard_server()
         assistant = VoiceAssistant(name="Astra")
         print("Astra background mode started.")
         assistant.run()

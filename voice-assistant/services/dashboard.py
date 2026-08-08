@@ -1,84 +1,95 @@
+"""Small state bridge used by the local Astra Dashboard."""
+
+from __future__ import annotations
+
 import json
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from queue import Empty, Queue
+from threading import Lock
+from typing import Any
 
 
 class DashboardStateStore:
-    def __init__(self, state_file: Optional[Path] = None) -> None:
-        if state_file is None:
-            state_file = Path(__file__).resolve().parent.parent / "dashboard" / "state.json"
-        self.state_file = state_file
-        self._ensure_file()
+    def __init__(self) -> None:
+        self.path = Path(__file__).resolve().parent.parent / "dashboard" / "state.json"
+        self._lock = Lock()
 
-    def _ensure_file(self) -> None:
-        self.state_file.parent.mkdir(parents=True, exist_ok=True)
-        if not self.state_file.exists():
-            self.write_state(
-                status="idle",
-                mode="sleep",
-                activity="Awaiting wake word",
-                last_command="",
-                last_response="",
-            )
+    def update(self, **changes: Any) -> None:
+        with self._lock:
+            state = self._read()
+            state.update({key: value for key, value in changes.items() if value is not None})
+            updated_at = datetime.now(timezone.utc).isoformat()
+            state["updated_at"] = updated_at
+            reply = changes.get("last_response")
+            if reply:
+                state["live_response"] = ""
+            state.pop("reply_history", None)
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.write_text(json.dumps(state, indent=2) + "\n")
 
-    def write_state(
-        self,
-        status: str,
-        mode: str,
-        activity: str,
-        last_command: str = "",
-        last_response: str = "",
-        details: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        payload = {
-            "status": status,
-            "mode": mode,
-            "activity": activity,
-            "last_command": last_command,
-            "last_response": last_response,
-            "updated_at": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
-        }
-
-        if self.state_file.exists() and details is None:
-            try:
-                with self.state_file.open("r", encoding="utf-8") as handle:
-                    current_state = json.load(handle)
-                if "details" in current_state:
-                    payload["details"] = current_state["details"]
-            except Exception:
-                pass
-
-        if details:
-            payload["details"] = details
-
-        with self.state_file.open("w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2)
-
-        return payload
-
-    def load_state(self) -> Dict[str, Any]:
-        if not self.state_file.exists():
-            self._ensure_file()
-        with self.state_file.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+    def _read(self) -> dict[str, Any]:
+        try:
+            return json.loads(self.path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {
+                "status": "offline",
+                "activity": "Astra has not started yet.",
+                "last_command": "",
+                "last_response": "",
+            }
 
 
-dashboard_store = DashboardStateStore()
+dashboard_state = DashboardStateStore()
+dashboard_commands: Queue[str] = Queue()
 
 
 def update_dashboard_state(
-    status: str,
-    mode: str,
-    activity: str,
-    last_command: str = "",
-    last_response: str = "",
-    details: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    return dashboard_store.write_state(
+    *,
+    status: str | None = None,
+    activity: str | None = None,
+    last_command: str | None = None,
+    last_response: str | None = None,
+    live_response: str | None = None,
+) -> None:
+    """Publish the latest assistant state for the local dashboard."""
+    dashboard_state.update(
         status=status,
-        mode=mode,
         activity=activity,
         last_command=last_command,
         last_response=last_response,
-        details=details,
+        live_response=live_response,
     )
+
+
+def enqueue_dashboard_command(command: str) -> bool:
+    """Queue a command submitted from the local dashboard."""
+    active_state = dashboard_state._read()
+    is_briefing = any(
+        phrase in command.lower()
+        for phrase in ("good morning", "daily briefing", "morning briefing")
+    )
+    if (
+        is_briefing
+        and active_state.get("status") == "responding"
+        and active_state.get("live_response")
+    ):
+        return False
+    dashboard_commands.put(command.strip())
+    update_dashboard_state(
+        status="processing",
+        activity="Dashboard command received.",
+        last_command=command.strip(),
+        live_response=f"Working on: {command.strip()}",
+    )
+    return True
+
+
+def get_dashboard_command(timeout: float | None = None) -> str | None:
+    """Return the next dashboard command, optionally waiting for one."""
+    try:
+        if timeout is None:
+            return dashboard_commands.get_nowait()
+        return dashboard_commands.get(timeout=timeout)
+    except Empty:
+        return None
